@@ -33,10 +33,15 @@ from bs4 import BeautifulSoup
 
 REPO_ROOT = Path(__file__).resolve().parent
 DATA_ROOT = REPO_ROOT / "data"
+PUBLIC_ROOT = REPO_ROOT / "public"
 
 REQUEST_TIMEOUT_S = 15
 MAX_STYLESHEETS = 5  # max aantal externe stylesheets dat we ophalen
 USER_AGENT = "HarvDemoGenerator/0.1 (+https://harvagency.com)"
+
+DEPLOY_BASE_URL = "https://harv-demos.vercel.app"
+DEPLOY_POLL_INTERVAL_S = 10
+DEPLOY_TIMEOUT_S = 180
 
 HEX_COLOR_RE = re.compile(r"#([0-9a-fA-F]{3,8})\b")
 RGB_COLOR_RE = re.compile(r"rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)")
@@ -250,6 +255,31 @@ def save_data(slug: str, data: dict[str, Any]) -> Path:
     return target_file
 
 
+def verify_deploy(slug: str, timeout_seconds: int = DEPLOY_TIMEOUT_S) -> bool:
+    """Poll de Vercel-deploy van een slug tot HTTP 200 of timeout.
+
+    Returns True bij HTTP 200, False bij timeout of fout.
+    """
+    url = f"{DEPLOY_BASE_URL}/demo/{slug}/"
+    print(f"🔎 verify_deploy: {url}")
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        elapsed = int(timeout_seconds - (deadline - time.monotonic()))
+        try:
+            resp = requests.get(
+                url, timeout=REQUEST_TIMEOUT_S, allow_redirects=True
+            )
+            if resp.status_code == 200:
+                print(f"✅ Demo live op {url}")
+                return True
+            print(f"  wachten op deploy... ({elapsed}s)  status={resp.status_code}")
+        except requests.RequestException as exc:
+            print(f"  wachten op deploy... ({elapsed}s)  err={type(exc).__name__}")
+        time.sleep(DEPLOY_POLL_INTERVAL_S)
+    print(f"⚠ verify_deploy: timeout na {timeout_seconds}s — {url}")
+    return False
+
+
 def git_commit_push(slug: str, target_file: Path) -> None:
     rel = target_file.relative_to(REPO_ROOT)
     subprocess.run(["git", "-C", str(REPO_ROOT), "add", str(rel)], check=True)
@@ -276,6 +306,11 @@ def main(argv: Optional[list[str]] = None) -> int:
         action="store_true",
         help="Sla git add/commit/push over (alleen JSON wegschrijven).",
     )
+    parser.add_argument(
+        "--skip-verify",
+        action="store_true",
+        help="Sla de verify_deploy poll over (handig zolang templates nog niet renderen).",
+    )
     args = parser.parse_args(argv)
 
     slug = slugify(args.slug) if args.slug else slug_from_url(args.url)
@@ -294,6 +329,20 @@ def main(argv: Optional[list[str]] = None) -> int:
     except subprocess.CalledProcessError as exc:
         print(f"⚠ git stap mislukt: {exc}", file=sys.stderr)
         return 1
+
+    if args.skip_verify:
+        return 0
+    # verify_deploy poll t/m fase-2 (templates ingevuld) heeft pas zin als er
+    # daadwerkelijk een `public/demo/<slug>/index.html` is. Anders krijg je
+    # gegarandeerd een timeout van 3 min.
+    index_file = PUBLIC_ROOT / "demo" / slug / "index.html"
+    if not index_file.exists():
+        print(
+            f"⏭ verify_deploy overgeslagen — geen {index_file.relative_to(REPO_ROOT)} "
+            f"(template fase nog niet gestart)."
+        )
+        return 0
+    verify_deploy(slug)
     return 0
 
 
