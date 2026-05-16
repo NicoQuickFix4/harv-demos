@@ -80,6 +80,11 @@ SERVICE_KEYWORDS = (
     "diensten", "services", "wat-wij-doen", "aanbod", "expertise", "specialiteiten",
 )
 BLOG_PATH_HINTS = ("/blog/", "/nieuws/", "/news/", "/artikel", "/post/", "/journal/")
+NAV_FALLBACKS: dict[str, list[str]] = {
+    "makelaardij": ["Home", "Woningaanbod", "Over ons", "Diensten", "Contact"],
+    "tandartsen": ["Home", "Behandelingen", "Over ons", "Tarieven", "Afspraak maken"],
+}
+NAV_FALLBACK_DEFAULT = ["Home", "Over ons", "Diensten", "Contact"]
 CERT_KEYWORDS = (
     "gecertificeerd", "erkend lid", "iso 9001", "iso 14001",
     "nvm makelaar", "vastgoedcert", "keurmerk", "award winner",
@@ -431,6 +436,74 @@ def extract_team_members(soup: BeautifulSoup, base_url: str) -> list[dict[str, O
 
 # ─── content ────────────────────────────────────────────────────────────────
 
+def extract_nav_items(
+    soup: BeautifulSoup,
+    sector: Optional[str],
+    base_url: Optional[str] = None,
+) -> list[str]:
+    """Haalt nav-items op uit een page, met sector-specifieke fallback.
+
+    Volgorde van zoeken:
+      1. <nav> element
+      2. <header> element
+      3. elementen met class 'menu' / 'nav' / 'navigation'
+
+    Filters: externe links (http(s)... naar ander domein), tekst > 25 chars,
+    lege strings, duplicaten. Maximaal 6 items terug. Bij geen treffer:
+    fallback op basis van sector.
+    """
+    own_host = (urlparse(base_url).hostname or "").lower() if base_url else None
+
+    def _is_external(href: str) -> bool:
+        href = (href or "").strip()
+        if not href.lower().startswith(("http://", "https://")):
+            return False
+        if not own_host:
+            return False
+        host = (urlparse(href).hostname or "").lower()
+        if host == own_host:
+            return False
+        if own_host in host or host in own_host:
+            return False
+        return True
+
+    candidates: list[Tag] = []
+    nav = soup.find("nav")
+    if nav:
+        candidates.append(nav)
+    header = soup.find("header")
+    if header:
+        candidates.append(header)
+    for cls in ("menu", "nav", "navigation"):
+        for el in soup.find_all(attrs={"class": re.compile(rf"\b{cls}\b", re.I)}):
+            candidates.append(el)
+
+    items: list[str] = []
+    seen: set[str] = set()
+    for container in candidates:
+        for a in container.find_all("a"):
+            text = _text(a)
+            if not text or len(text) > 25:
+                continue
+            if _is_external(a.get("href", "")):
+                continue
+            key = text.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            items.append(text)
+            if len(items) >= 6:
+                return items
+        if items:
+            break
+
+    if items:
+        return items[:6]
+
+    sector_key = (sector or "").strip().lower()
+    return list(NAV_FALLBACKS.get(sector_key, NAV_FALLBACK_DEFAULT))
+
+
 def extract_tagline(soup: BeautifulSoup) -> Optional[str]:
     for tag_name in ("h1", "h2"):
         tag = soup.find(tag_name)
@@ -761,11 +834,12 @@ def extract_certifications(soup: BeautifulSoup, text: str) -> list[str]:
 
 # ─── orchestratie ───────────────────────────────────────────────────────────
 
-def scrape_site_data(url: str) -> dict[str, Any]:
+def scrape_site_data(url: str, sector: Optional[str] = None) -> dict[str, Any]:
     """Haal alle data van een leadwebsite en geef een nested dict terug.
 
     Crasht nooit: iedere extractor zit in een isolerende `_safe` wrapper.
-    Ontbrekende velden krijgen `null`.
+    Ontbrekende velden krijgen `null`. `sector` voedt de fallback-lijst van
+    `extract_nav_items` als er geen echte nav-items gevonden worden.
     """
     headers = {"User-Agent": USER_AGENT, "Accept-Language": "nl,en;q=0.8"}
     start = time.monotonic()
@@ -778,6 +852,7 @@ def scrape_site_data(url: str) -> dict[str, Any]:
     soup = BeautifulSoup(html, "html.parser")
     page_text = " ".join(soup.stripped_strings)
     ld_blocks = _safe(_collect_json_ld, soup, default=[]) or []
+    nav_items = _safe(extract_nav_items, soup, sector, final_url, default=[]) or []
 
     visual = {
         "logo": _safe(extract_logo, soup, final_url),
@@ -796,6 +871,7 @@ def scrape_site_data(url: str) -> dict[str, Any]:
         "blog_posts": _safe(extract_blog_posts, soup, final_url, default=[]) or [],
         "reviews": _safe(extract_reviews, soup, ld_blocks, default=[]) or [],
         "rating": _safe(extract_rating, soup, ld_blocks),
+        "nav_items": nav_items,
     }
     contact = {
         "phone": _safe(extract_phone, soup, page_text),
@@ -814,6 +890,7 @@ def scrape_site_data(url: str) -> dict[str, Any]:
         "final_url": final_url,
         "scraped_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "laadtijd_ms": laadtijd_ms,
+        "sector": sector,
         "visual": visual,
         "team": team,
         "content": content,
@@ -881,6 +958,7 @@ def _summary(data: dict[str, Any]) -> None:
     print(f"  team_hero={team['hero_photo'] or '—'}  members={len(team['members'])}")
     print(f"  tagline={content['tagline'] or '—'}")
     print(f"  services={len(content['services'])}  blog={len(content['blog_posts'])}  reviews={len(content['reviews'])}  rating={content['rating']}")
+    print(f"  nav_items={content['nav_items']}")
     print(f"  phone={contact['phone'] or '—'}  email={contact['email'] or '—'}")
     print(f"  address={contact['address'] or '—'}  hours={len(contact['opening_hours'])}")
     socials_set = [k for k, v in contact["socials"].items() if v]
@@ -892,6 +970,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="Demo data scraper")
     parser.add_argument("--url", required=True, help="Lead-URL (volledige URL)")
     parser.add_argument("--slug", help="Slug onder data/ (default: domeinnaam)")
+    parser.add_argument(
+        "--sector",
+        required=True,
+        help="Sector ('makelaardij', 'tandartsen', …) — voedt de nav fallback.",
+    )
     parser.add_argument(
         "--no-push",
         action="store_true",
@@ -907,7 +990,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     slug = slugify(args.slug) if args.slug else slug_from_url(args.url)
     print(f"🔎 scrape {args.url}  slug={slug}")
     try:
-        data = scrape_site_data(args.url)
+        data = scrape_site_data(args.url, sector=args.sector)
     except requests.RequestException as exc:
         print(f"⚠ request mislukt: {exc}", file=sys.stderr)
         return 1
