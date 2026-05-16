@@ -80,9 +80,9 @@ SERVICE_KEYWORDS = (
     "diensten", "services", "wat-wij-doen", "aanbod", "expertise", "specialiteiten",
 )
 BLOG_PATH_HINTS = ("/blog/", "/nieuws/", "/news/", "/artikel", "/post/", "/journal/")
+# Sectoren worden hier toegevoegd zodra de templates klaar zijn. Nu alleen: makelaardij.
 NAV_FALLBACKS: dict[str, list[str]] = {
     "makelaardij": ["Home", "Woningaanbod", "Over ons", "Diensten", "Contact"],
-    "tandartsen": ["Home", "Behandelingen", "Over ons", "Tarieven", "Afspraak maken"],
 }
 NAV_FALLBACK_DEFAULT = ["Home", "Over ons", "Diensten", "Contact"]
 CERT_KEYWORDS = (
