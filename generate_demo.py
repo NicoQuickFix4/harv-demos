@@ -91,6 +91,27 @@ _NAV_SKIP_CLASSES = (
 _NAV_NOISE_CONTAINER_HINTS = (
     "filter", "toolbar", "search-bar", "sort-bar", "view-toggle", "viewtoggle", "tabbar",
 )
+
+# Fase-2 path-scraping doelen
+BLOG_PATHS = ("/blog", "/blog/", "/nieuws", "/nieuws/", "/artikelen", "/updates")
+RSS_PATHS = ("/feed", "/feed/", "/rss.xml", "/rss")
+WONING_PATHS = ("/aanbod", "/aanbod/", "/woningen", "/woningen/", "/te-koop", "/koopwoningen")
+TEAM_PATHS = ("/team", "/team/", "/over-ons", "/over-ons/", "/over", "/medewerkers", "/mensen")
+
+WONING_STATUS_PATTERNS = (
+    (re.compile(r"\bverkocht\b", re.I), "Verkocht"),
+    (re.compile(r"\bonder\s*bod\b", re.I), "Onder bod"),
+    (re.compile(r"\bbeschikbaar\b", re.I), "Beschikbaar"),
+    (re.compile(r"\bte\s*koop\b", re.I), "Te koop"),
+    (re.compile(r"\bte\s*huur\b", re.I), "Te huur"),
+    (re.compile(r"\bnieuw\b", re.I), "Nieuw"),
+)
+PRICE_RE = re.compile(r"€\s*[\d.,]+(?:\s*(?:k|kr|/mnd|p/?m))?", re.IGNORECASE)
+DATE_RE = re.compile(
+    r"\b(\d{1,2}\s+(?:jan(?:uari)?|feb(?:ruari)?|maart|apr(?:il)?|mei|juni?|juli?|aug(?:ustus)?|sep(?:tember)?|okt(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{4})\b",
+    re.IGNORECASE,
+)
+ISO_DATE_RE = re.compile(r"\b(20\d{2})-(\d{2})-(\d{2})\b")
 CERT_KEYWORDS = (
     "gecertificeerd", "erkend lid", "iso 9001", "iso 14001",
     "nvm makelaar", "vastgoedcert", "keurmerk", "award winner",
@@ -249,7 +270,16 @@ def extract_color_palette(html: str, soup: BeautifulSoup, base_url: str) -> dict
 
     meta = soup.find("meta", attrs={"name": re.compile(r"^theme-color$", re.I)})
     if meta and meta.get("content"):
-        palette["primary"] = _normalize_hex(meta["content"])
+        candidate = _normalize_hex(meta["content"])
+        # Accept theme-color alleen als 'ie ook echt een brand-kleur is —
+        # near-white / near-black / grayscale skippen we zodat de ranked search
+        # alsnog een betere brandkleur kan vinden.
+        if (
+            candidate
+            and not _is_grayscale(candidate)
+            and 25 <= _brightness(candidate) <= 235
+        ):
+            palette["primary"] = candidate
 
     counter = _build_color_counter(html, soup, base_url)
     ranked = [c for c, _ in counter.most_common()]
@@ -915,6 +945,562 @@ def extract_certifications(soup: BeautifulSoup, text: str) -> list[str]:
 
 # ─── orchestratie ───────────────────────────────────────────────────────────
 
+# ─── Fase-2 path-scraping ───────────────────────────────────────────────────
+
+def _fetch_path(base_url: str, path: str) -> Optional[BeautifulSoup]:
+    """GET base_url + path en geef parsed soup terug, of None bij faal/404."""
+    headers = {"User-Agent": USER_AGENT, "Accept-Language": "nl,en;q=0.8"}
+    parsed = urlparse(base_url)
+    full = f"{parsed.scheme}://{parsed.netloc}{path}"
+    try:
+        resp = requests.get(full, headers=headers, timeout=REQUEST_TIMEOUT_S, allow_redirects=True)
+    except requests.RequestException:
+        return None
+    if not resp.ok:
+        return None
+    return BeautifulSoup(resp.text, "html.parser")
+
+
+def extract_bedrijfsnaam(soup: BeautifulSoup, url: str) -> Optional[str]:
+    """Naam van het bedrijf — og:site_name > <title> opgeschoond > hostname slug."""
+    og = soup.find("meta", attrs={"property": re.compile(r"^og:site_name$", re.I)})
+    if og and og.get("content"):
+        return og["content"].strip()
+    title = soup.find("title")
+    if title and title.get_text(strip=True):
+        text = title.get_text(strip=True)
+        # Veel sites zetten "Naam | Tagline" of "Naam - Stad" — pak deel vóór separator.
+        for sep in ("|", " - ", " — ", " · ", "::"):
+            if sep in text:
+                left = text.split(sep, 1)[0].strip()
+                if 2 <= len(left) <= 80:
+                    return left
+        if 2 <= len(text) <= 80:
+            return text
+    host = (urlparse(url).hostname or "").removeprefix("www.")
+    if host:
+        return host.split(".")[0].capitalize()
+    return None
+
+
+def extract_homepage_tagline(soup: BeautifulSoup) -> Optional[str]:
+    """<h1> als <80 chars, anders meta description."""
+    h1 = soup.find("h1")
+    if h1:
+        text = _text(h1)
+        if text and len(text) < 80:
+            return text
+    meta = soup.find("meta", attrs={"name": re.compile(r"^description$", re.I)})
+    if meta and meta.get("content"):
+        return meta["content"].strip() or None
+    return None
+
+
+def _extract_blog_post_card(item: Tag, base_url: str) -> Optional[dict[str, Any]]:
+    """Probeer een blog-card te parsen tot titel/datum/samenvatting/afbeelding."""
+    # Titel: eerste heading of link met tekst
+    title_tag = item.find(re.compile(r"^h[1-4]$")) or item.find("a")
+    if not title_tag:
+        return None
+    title = _text(title_tag)
+    if not title or len(title) < 5:
+        return None
+    # Datum: <time datetime="..."> of zichtbare tekst
+    datum: Optional[str] = None
+    time_tag = item.find("time")
+    if time_tag:
+        datum = (time_tag.get("datetime") or _text(time_tag) or "").strip() or None
+    if not datum:
+        item_text = item.get_text(" ", strip=True)
+        m = ISO_DATE_RE.search(item_text) or DATE_RE.search(item_text)
+        if m:
+            datum = m.group(0)
+    # Samenvatting: eerste <p> ≥ 30 chars, anders item-tekst
+    samenvatting: Optional[str] = None
+    for p in item.find_all("p"):
+        text = _text(p)
+        if text and len(text) >= 30:
+            samenvatting = text
+            break
+    if not samenvatting:
+        all_text = item.get_text(" ", strip=True)
+        if title in all_text:
+            all_text = all_text.replace(title, "", 1).strip()
+        samenvatting = all_text.strip() or None
+    if samenvatting:
+        samenvatting = samenvatting[:150]
+    # Afbeelding
+    afbeelding: Optional[str] = None
+    img = item.find("img")
+    if img:
+        src = img.get("src") or img.get("data-src") or ""
+        if src and not src.startswith("data:"):
+            afbeelding = _abs(src, base_url)
+    return {
+        "titel": title[:160],
+        "datum": datum,
+        "samenvatting": samenvatting,
+        "afbeelding": afbeelding,
+    }
+
+
+def _parse_rss_items(xml_text: str, base_url: str) -> list[dict[str, Any]]:
+    """Pak titel/datum/samenvatting/afbeelding uit een RSS-feed (BS4 'xml')."""
+    soup = BeautifulSoup(xml_text, "xml")
+    posts: list[dict[str, Any]] = []
+    for item in soup.find_all(re.compile(r"^(item|entry)$"))[:3]:
+        title_tag = item.find(re.compile(r"^title$"))
+        title = title_tag.get_text(strip=True) if title_tag else ""
+        if not title:
+            continue
+        date_tag = item.find(re.compile(r"^(pubDate|published|updated|dc:date)$"))
+        datum = date_tag.get_text(strip=True) if date_tag else None
+        desc_tag = item.find(re.compile(r"^(description|summary|content)$"))
+        samenvatting = None
+        if desc_tag:
+            raw = desc_tag.get_text(" ", strip=True)
+            samenvatting = (BeautifulSoup(raw, "html.parser").get_text(" ", strip=True))[:150]
+        afbeelding = None
+        for media in item.find_all(re.compile(r"^(media:content|enclosure|media:thumbnail)$")):
+            url = media.get("url") or media.get("href")
+            if url:
+                afbeelding = _abs(url, base_url)
+                break
+        if not afbeelding and desc_tag:
+            inner = BeautifulSoup(desc_tag.get_text(" ", strip=True), "html.parser")
+            img = inner.find("img")
+            if img and img.get("src"):
+                afbeelding = _abs(img["src"], base_url)
+        posts.append({
+            "titel": title[:160],
+            "datum": datum,
+            "samenvatting": samenvatting,
+            "afbeelding": afbeelding,
+        })
+    return posts
+
+
+def scrape_blog_posts(base_url: str) -> list[dict[str, Any]]:
+    """Probeer /blog, /nieuws, /artikelen, /updates en RSS — max 3 posts."""
+    headers = {"User-Agent": USER_AGENT, "Accept-Language": "nl,en;q=0.8"}
+    parsed = urlparse(base_url)
+    origin = f"{parsed.scheme}://{parsed.netloc}"
+
+    # Eerste: HTML blog/nieuws paginas
+    for path in BLOG_PATHS:
+        soup = _fetch_path(base_url, path)
+        if soup is None:
+            continue
+        items: list[Tag] = []
+        for tag_name in ("article", "li"):
+            items.extend(soup.find_all(tag_name))
+        # Filter naar items die plausibel blog-cards zijn (hebben heading + img of <p>)
+        plausible: list[Tag] = []
+        for it in items:
+            if it.find(re.compile(r"^h[1-4]$")) and (it.find("img") or it.find("p")):
+                plausible.append(it)
+            if len(plausible) >= 8:
+                break
+        posts: list[dict[str, Any]] = []
+        for it in plausible:
+            parsed_post = _extract_blog_post_card(it, base_url)
+            if parsed_post:
+                posts.append(parsed_post)
+            if len(posts) >= 3:
+                break
+        if posts:
+            return posts
+
+    # Daarna: RSS
+    for path in RSS_PATHS:
+        try:
+            resp = requests.get(origin + path, headers=headers, timeout=REQUEST_TIMEOUT_S)
+        except requests.RequestException:
+            continue
+        if not resp.ok or "<rss" not in resp.text[:1024].lower() and "<feed" not in resp.text[:1024].lower():
+            continue
+        rss_posts = _parse_rss_items(resp.text, base_url)
+        if rss_posts:
+            return rss_posts[:3]
+    return []
+
+
+def _detect_status(text: str) -> str:
+    for pattern, label in WONING_STATUS_PATTERNS:
+        if pattern.search(text):
+            return label
+    return "Beschikbaar"
+
+
+def _detect_plaats(text: str) -> Optional[str]:
+    """Vind een waarschijnlijke plaatsnaam — laatste 'Naam, Stad' patroon."""
+    # 'Straatnaam 12, 1234 AB Stad' — pak deel achter de postcode of komma.
+    m = re.search(r",\s*(?:\d{4}\s?[A-Z]{2}\s+)?([A-Z][a-zA-Z\-']+(?:\s+[A-Z][a-zA-Z\-']+)*)\b", text)
+    if m:
+        plaats = m.group(1).strip()
+        if 2 <= len(plaats) <= 40:
+            return plaats
+    return None
+
+
+def _extract_woning_card(item: Tag, base_url: str) -> Optional[dict[str, Any]]:
+    img = item.find("img")
+    if img is None:
+        return None
+    src = img.get("src") or img.get("data-src") or ""
+    if not src or src.startswith("data:"):
+        return None
+    text = item.get_text(" ", strip=True)
+    price_match = PRICE_RE.search(text)
+    if not price_match:
+        return None
+    return {
+        "foto": _abs(src, base_url),
+        "prijs": re.sub(r"\s+", " ", price_match.group(0).strip()),
+        "status": _detect_status(text),
+        "plaats": _detect_plaats(text),
+    }
+
+
+def scrape_woningaanbod(base_url: str) -> list[dict[str, Any]]:
+    """Probeer /aanbod, /woningen, /te-koop, /koopwoningen — max 6 woningen."""
+    for path in WONING_PATHS:
+        soup = _fetch_path(base_url, path)
+        if soup is None:
+            continue
+        candidates: list[Tag] = []
+        for sel in (
+            {"class": re.compile(r"(woning|listing|property|huis|object)", re.I)},
+            {"itemtype": re.compile(r"(Residence|Product|Offer)", re.I)},
+        ):
+            for el in soup.find_all(attrs=sel):
+                if el.find("img"):
+                    candidates.append(el)
+            if candidates:
+                break
+        # Fallback: <article> met img + €
+        if not candidates:
+            for art in soup.find_all("article"):
+                if art.find("img") and "€" in art.get_text(""):
+                    candidates.append(art)
+        # Fallback 2: alle <a> met img + € in tekst
+        if not candidates:
+            for a in soup.find_all("a"):
+                if a.find("img") and "€" in a.get_text(""):
+                    candidates.append(a)
+
+        woningen: list[dict[str, Any]] = []
+        seen_imgs: set[str] = set()
+        for c in candidates:
+            parsed = _extract_woning_card(c, base_url)
+            if not parsed:
+                continue
+            if parsed["foto"] in seen_imgs:
+                continue
+            seen_imgs.add(parsed["foto"])
+            woningen.append(parsed)
+            if len(woningen) >= 6:
+                break
+        if woningen:
+            return woningen
+    return []
+
+
+def _image_portrait_ratio(img: Tag) -> Optional[float]:
+    """h/w ratio uit width/height attrs; None als onbekend."""
+    try:
+        w = int(img.get("width") or 0)
+        h = int(img.get("height") or 0)
+    except (TypeError, ValueError):
+        return None
+    if w <= 0 or h <= 0:
+        return None
+    return h / w
+
+
+def _looks_like_person_name(text: str) -> bool:
+    if not text:
+        return False
+    words = text.split()
+    if not (2 <= len(words) <= 4):
+        return False
+    if not all(len(w) >= 2 for w in words):
+        return False
+    low = text.lower()
+    if any(kw in low for kw in (
+        "logo", "banner", "icon", "background", "header", "placeholder",
+        "we are", "wij zijn", "ons team", "our team",
+        "real estate", "estate", "makelaar",
+        "youtube", "video", "preview", "thumbnail", "screenshot",
+    )):
+        return False
+    # Eerste woord moet een persoonsnaam-vorm hebben (geen lidwoord/voornaamwoord).
+    first = words[0].lower()
+    if first in ("we", "wij", "ons", "onze", "the", "a", "our"):
+        return False
+    return sum(1 for w in words if w[:1].isupper()) >= len(words) - 1
+
+
+def scrape_team_members(base_url: str) -> list[dict[str, Any]]:
+    """Probeer /team, /over-ons, /over, /medewerkers, /mensen — max 6 personen.
+
+    Filter op portrait-ratio > 0.6 (height/width). Onbekende dims worden niet
+    geweerd, maar landscape-banners wel.
+    """
+    for path in TEAM_PATHS:
+        soup = _fetch_path(base_url, path)
+        if soup is None:
+            continue
+        members: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for img in soup.find_all("img"):
+            src = img.get("src") or img.get("data-src") or ""
+            if not src or src.startswith("data:"):
+                continue
+            absolute = _abs(src, base_url)
+            if absolute in seen:
+                continue
+
+            # Skip logo/favicon-images — die zijn nooit teamportret.
+            low_src = absolute.lower()
+            classes = " ".join(img.get("class") or []).lower()
+            if any(kw in low_src for kw in ("logo", "favicon", "brand")):
+                continue
+            if any(kw in classes for kw in ("logo", "brand")):
+                continue
+
+            # Portrait filter — alleen weren als we de ratio weten en hij is te plat.
+            ratio = _image_portrait_ratio(img)
+            if ratio is not None and ratio < 0.6:
+                continue
+
+            alt = (img.get("alt") or "").strip()
+            naam: Optional[str] = alt if _looks_like_person_name(alt) else None
+            if not naam:
+                # Probeer naam in container te vinden (figcaption / korte heading)
+                container = img.find_parent(["figure", "article", "li", "div", "section"])
+                if container:
+                    for tag in container.find_all(["figcaption", "h3", "h4", "h5", "strong", "span"]):
+                        candidate = _text(tag)
+                        if _looks_like_person_name(candidate):
+                            naam = candidate
+                            break
+            if not naam:
+                continue
+
+            functie: Optional[str] = None
+            container = img.find_parent(["figure", "article", "li", "div", "section"])
+            if container:
+                for piece in container.stripped_strings:
+                    if piece.strip().lower() == naam.lower():
+                        continue
+                    if 3 <= len(piece) <= 80 and not _looks_like_person_name(piece):
+                        functie = piece.strip()
+                        break
+
+            members.append({"foto": absolute, "naam": naam, "functie": functie})
+            seen.add(absolute)
+            if len(members) >= 6:
+                break
+        if members:
+            return members
+    return []
+
+
+# ─── HTML renderers ─────────────────────────────────────────────────────────
+
+def _html_escape(text: str) -> str:
+    return (
+        (text or "")
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
+
+
+def _status_class(status: Optional[str]) -> str:
+    if not status:
+        return "t-koop"
+    s = status.lower()
+    if "verkocht" in s:
+        return "t-vkcht"
+    if "bod" in s:
+        return "t-bod"
+    if "huur" in s:
+        return "t-huur"
+    return "t-koop"
+
+
+def render_woningaanbod_html(woningen: list[dict[str, Any]]) -> str:
+    """Genereer .prop-card markup voor het woningaanbod-grid."""
+    if not woningen:
+        return ""
+    cards: list[str] = []
+    for w in woningen:
+        foto = _html_escape(w.get("foto") or "")
+        prijs = _html_escape(w.get("prijs") or "")
+        status = w.get("status") or "Te koop"
+        plaats = _html_escape(w.get("plaats") or "")
+        cards.append(
+            '<div class="prop-card">'
+            f'<div class="prop-img-wrap"><img src="{foto}" alt="">'
+            f'<span class="prop-tag {_status_class(status)}">{_html_escape(status)}</span></div>'
+            '<div class="prop-body">'
+            f'<div class="prop-price">{prijs}</div>'
+            f'<div class="prop-addr">{plaats}</div>'
+            '</div></div>'
+        )
+    return "\n        ".join(cards)
+
+
+def render_team_html(team: list[dict[str, Any]]) -> str:
+    """Genereer .team-card markup."""
+    if not team:
+        return ""
+    cards: list[str] = []
+    for p in team:
+        foto = _html_escape(p.get("foto") or "")
+        naam = _html_escape(p.get("naam") or "")
+        functie = _html_escape(p.get("functie") or "")
+        cards.append(
+            '<div class="team-card">'
+            f'<img src="{foto}" alt="{naam}">'
+            '<div class="team-info">'
+            f'<div class="team-name">{naam}</div>'
+            f'<div class="team-role">{functie}</div>'
+            '</div></div>'
+        )
+    return "\n        ".join(cards)
+
+
+def render_blog_html(blog_posts: list[dict[str, Any]]) -> str:
+    """Genereer .blog-card markup (matchend met de bestaande template-CSS)."""
+    if not blog_posts:
+        return ""
+    cards: list[str] = []
+    for post in blog_posts:
+        afbeelding = _html_escape(post.get("afbeelding") or "")
+        titel = _html_escape(post.get("titel") or "")
+        datum = _html_escape(post.get("datum") or "")
+        samenvatting = _html_escape(post.get("samenvatting") or "")
+        cards.append(
+            '<a href="#" class="blog-card">'
+            + (f'<img src="{afbeelding}" alt="">' if afbeelding else "")
+            + '<div class="blog-body">'
+            + (f'<div class="blog-cat">{datum}</div>' if datum else "")
+            + f'<div class="blog-title">{titel}</div>'
+            + (f'<div class="blog-snip">{samenvatting}</div>' if samenvatting else "")
+            + '</div></a>'
+        )
+    return "\n        ".join(cards)
+
+
+# ─── Fase-2 orchestrator ────────────────────────────────────────────────────
+
+def scrape_full_site_data(url: str, sector: str) -> dict[str, Any]:
+    """Fase-2 scraper: levert een vlakke JSON-structuur klaar voor templating.
+
+    Volgorde:
+      1. homepage ophalen + basisvelden (kleur, logo, tagline, nav, team-hero)
+      2. path-scrapes voor blog/woningen/team
+      3. samenstellen tot de gespecificeerde JSON-vorm
+    """
+    headers = {"User-Agent": USER_AGENT, "Accept-Language": "nl,en;q=0.8"}
+    resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT_S, allow_redirects=True)
+    resp.raise_for_status()
+    html = resp.text
+    final_url = resp.url
+    soup = BeautifulSoup(html, "html.parser")
+
+    palette = _safe(extract_color_palette, html, soup, final_url, default={"primary": None})
+    primaire_kleur = (palette or {}).get("primary")
+    logo_url = _safe(extract_logo, soup, final_url)
+    if not logo_url:
+        # Header-first-image fallback per spec
+        header = soup.find("header")
+        if header:
+            img = header.find("img")
+            if img and (img.get("src") or img.get("data-src")):
+                logo_url = _abs(img.get("src") or img.get("data-src"), final_url)
+    if not logo_url:
+        logo_url = _safe(extract_favicon, soup, final_url)
+
+    teamfoto_url = _safe(extract_team_hero, soup, final_url)
+    tagline = _safe(extract_homepage_tagline, soup)
+    nav_items = _safe(extract_nav_items, soup, sector, final_url, default=[]) or []
+    bedrijfsnaam = _safe(extract_bedrijfsnaam, soup, final_url)
+
+    blog_posts = _safe(scrape_blog_posts, final_url, default=[]) or []
+    woningaanbod = (
+        _safe(scrape_woningaanbod, final_url, default=[]) or []
+        if (sector or "").lower() == "makelaardij"
+        else []
+    )
+    team = _safe(scrape_team_members, final_url, default=[]) or []
+
+    return {
+        "bedrijfsnaam": bedrijfsnaam,
+        "primaire_kleur": primaire_kleur,
+        "logo_url": logo_url,
+        "teamfoto_url": teamfoto_url,
+        "tagline": tagline,
+        "nav_items": nav_items,
+        "blog_posts": blog_posts,
+        "woningaanbod": woningaanbod,
+        "team": team,
+    }
+
+
+# ─── Notion update ──────────────────────────────────────────────────────────
+
+_NOTION_API_BASE = "https://api.notion.com/v1"
+_NOTION_VERSION = "2022-06-28"
+
+
+def update_notion_after_demo(notion_page_id: Optional[str], demo_url: str) -> bool:
+    """Werk de Notion-pagina van de lead bij na een succesvolle demo-deploy.
+
+    Returns True bij HTTP 200, False bij faal of overgeslagen.
+    """
+    if not notion_page_id:
+        print("⚠ update_notion_after_demo: geen notion_page_id meegegeven — skip.")
+        return False
+    import os
+    token = os.environ.get("NOTION_TOKEN") or os.environ.get("NOTION_API_KEY", "")
+    if not token:
+        print("⚠ update_notion_after_demo: NOTION_TOKEN ontbreekt — skip.")
+        return False
+    payload = {
+        "properties": {
+            "Demo-link": {"url": demo_url},
+            "Fase": {"select": {"name": "Demo build"}},
+            "Demo Approved": {"select": {"name": "❌ Niet goedgekeurd"}},
+        }
+    }
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+        "Notion-Version": _NOTION_VERSION,
+    }
+    try:
+        resp = requests.patch(
+            f"{_NOTION_API_BASE}/pages/{notion_page_id}",
+            headers=headers,
+            json=payload,
+            timeout=20,
+        )
+        if resp.status_code == 200:
+            print(f"✅ Notion bijgewerkt: pagina {notion_page_id[:8]}…  Demo-link={demo_url}")
+            return True
+        print(
+            f"⚠ Notion update faalde: HTTP {resp.status_code} — body: {resp.text[:300]}"
+        )
+    except requests.RequestException as exc:
+        print(f"⚠ Notion update exception: {exc}")
+    return False
+
+
 def scrape_site_data(url: str, sector: Optional[str] = None) -> dict[str, Any]:
     """Haal alle data van een leadwebsite en geef een nested dict terug.
 
@@ -1027,6 +1613,16 @@ def verify_deploy(slug: str, timeout_seconds: int = DEPLOY_TIMEOUT_S) -> bool:
     return False
 
 
+def _summary_full(data: dict[str, Any]) -> None:
+    print(f"  bedrijfsnaam={data.get('bedrijfsnaam')}")
+    print(f"  primaire_kleur={data.get('primaire_kleur')}  logo_url={data.get('logo_url')}")
+    print(f"  tagline={data.get('tagline')}")
+    print(f"  nav_items={data.get('nav_items')}")
+    print(f"  blog_posts={len(data.get('blog_posts') or [])}  "
+          f"woningaanbod={len(data.get('woningaanbod') or [])}  "
+          f"team={len(data.get('team') or [])}")
+
+
 def _summary(data: dict[str, Any]) -> None:
     visual = data["visual"]
     team = data["team"]
@@ -1066,16 +1662,29 @@ def main(argv: Optional[list[str]] = None) -> int:
         action="store_true",
         help="Sla de verify_deploy poll over (handig zolang templates nog niet renderen).",
     )
+    parser.add_argument(
+        "--notion-page-id",
+        help="Notion page id van de lead — wordt na verify_deploy bijgewerkt.",
+    )
+    parser.add_argument(
+        "--legacy",
+        action="store_true",
+        help="Gebruik de oude nested scrape_site_data ipv de Fase-2 scrape_full_site_data.",
+    )
     args = parser.parse_args(argv)
 
     slug = slugify(args.slug) if args.slug else slug_from_url(args.url)
     print(f"🔎 scrape {args.url}  slug={slug}")
     try:
-        data = scrape_site_data(args.url, sector=args.sector)
+        if args.legacy:
+            data = scrape_site_data(args.url, sector=args.sector)
+            _summary(data)
+        else:
+            data = scrape_full_site_data(args.url, sector=args.sector)
+            _summary_full(data)
     except requests.RequestException as exc:
         print(f"⚠ request mislukt: {exc}", file=sys.stderr)
         return 1
-    _summary(data)
 
     target = save_data(slug, data)
     print(f"💾 data opgeslagen → {target.relative_to(REPO_ROOT)}")
@@ -1097,7 +1706,10 @@ def main(argv: Optional[list[str]] = None) -> int:
             f"(template fase nog niet gestart)."
         )
         return 0
-    verify_deploy(slug)
+    if verify_deploy(slug):
+        update_notion_after_demo(
+            args.notion_page_id, f"{DEPLOY_BASE_URL}/demo/{slug}/"
+        )
     return 0
 
 

@@ -874,7 +874,7 @@
 <!-- ─── NAVBAR ─── -->
 <div class="navbar-wrap">
     <nav class="navbar">
-        <a href="#" class="nav-logo">Van Dijk<span>.</span></a>
+        <a href="#" class="nav-logo"><img src="{{LOGO_URL}}" alt="" class="nav-logo-img" onerror="this.style.display='none'" style="max-height:24px;vertical-align:middle;margin-right:8px;">Van Dijk<span>.</span></a>
         <div class="nav-links">
             {{NAV_ITEMS}}
         </div>
@@ -899,6 +899,7 @@
             Hoi, wij zijn Van Dijk Makelaardij
         </div>
         <h1 class="hero-h1">Uw betrouwbare partner in <em>Vastgoed</em></h1>
+        <p class="hero-tagline" style="font-size:18px;line-height:1.55;max-width:540px;margin:18px 0 0;color:rgba(255,255,255,0.92);">{{TAGLINE}}</p>
         <div class="hero-stats">
             <div>
                 <div class="stat-num">450+</div>
@@ -940,20 +941,7 @@
 </div>
 <div class="scroll-mask">
     <div class="scroll-track">
-        <!-- 6 cards + 6 duplicates for seamless loop -->
-        <div class="prop-card"><div class="prop-img-wrap"><img src="https://images.unsplash.com/photo-1560448204-603b3fc33ddc?w=400&q=80" alt=""><span class="prop-tag t-koop">Te koop</span></div><div class="prop-body"><div class="prop-price">€ 895.000</div><div class="prop-addr">Maliesingel 45, Utrecht</div><div class="prop-meta"><span>4 kamers</span><span>148 m²</span></div></div></div>
-        <div class="prop-card"><div class="prop-img-wrap"><img src="https://images.unsplash.com/photo-1449158743715-0a90ebb6d2d8?w=400&q=80" alt=""><span class="prop-tag t-bod">Onder bod</span></div><div class="prop-body"><div class="prop-price">€ 525.000</div><div class="prop-addr">Kanaalstraat 88, Utrecht</div><div class="prop-meta"><span>3 kamers</span><span>112 m²</span></div></div></div>
-        <div class="prop-card"><div class="prop-img-wrap"><img src="https://images.unsplash.com/photo-1480074568708-e7b720bb3f09?w=400&q=80" alt=""><span class="prop-tag t-vkcht">Verkocht</span></div><div class="prop-body"><div class="prop-price">€ 675.000</div><div class="prop-addr">Catharijnesingel 12, Utrecht</div><div class="prop-meta"><span>3 kamers</span><span>125 m²</span></div></div></div>
-        <div class="prop-card"><div class="prop-img-wrap"><img src="https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=400&q=80" alt=""><span class="prop-tag t-huur">Te huur</span></div><div class="prop-body"><div class="prop-price">€ 2.250 / mnd</div><div class="prop-addr">Laan van Chartroise 3, Utrecht</div><div class="prop-meta"><span>2 kamers</span><span>88 m²</span></div></div></div>
-        <div class="prop-card"><div class="prop-img-wrap"><img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&q=80" alt=""><span class="prop-tag t-koop">Te koop</span></div><div class="prop-body"><div class="prop-price">€ 450.000</div><div class="prop-addr">Vredenburg 10, Utrecht</div><div class="prop-meta"><span>2 kamers</span><span>82 m²</span></div></div></div>
-        <div class="prop-card"><div class="prop-img-wrap"><img src="https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=400&q=80" alt=""><span class="prop-tag t-koop">Te koop</span></div><div class="prop-body"><div class="prop-price">€ 1.150.000</div><div class="prop-addr">Oudegracht 55, Utrecht</div><div class="prop-meta"><span>5 kamers</span><span>210 m²</span></div></div></div>
-        <!-- Duplicates for loop -->
-        <div class="prop-card"><div class="prop-img-wrap"><img src="https://images.unsplash.com/photo-1560448204-603b3fc33ddc?w=400&q=80" alt=""><span class="prop-tag t-koop">Te koop</span></div><div class="prop-body"><div class="prop-price">€ 895.000</div><div class="prop-addr">Maliesingel 45, Utrecht</div><div class="prop-meta"><span>4 kamers</span><span>148 m²</span></div></div></div>
-        <div class="prop-card"><div class="prop-img-wrap"><img src="https://images.unsplash.com/photo-1449158743715-0a90ebb6d2d8?w=400&q=80" alt=""><span class="prop-tag t-bod">Onder bod</span></div><div class="prop-body"><div class="prop-price">€ 525.000</div><div class="prop-addr">Kanaalstraat 88, Utrecht</div><div class="prop-meta"><span>3 kamers</span><span>112 m²</span></div></div></div>
-        <div class="prop-card"><div class="prop-img-wrap"><img src="https://images.unsplash.com/photo-1480074568708-e7b720bb3f09?w=400&q=80" alt=""><span class="prop-tag t-vkcht">Verkocht</span></div><div class="prop-body"><div class="prop-price">€ 675.000</div><div class="prop-addr">Catharijnesingel 12, Utrecht</div><div class="prop-meta"><span>3 kamers</span><span>125 m²</span></div></div></div>
-        <div class="prop-card"><div class="prop-img-wrap"><img src="https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=400&q=80" alt=""><span class="prop-tag t-huur">Te huur</span></div><div class="prop-body"><div class="prop-price">€ 2.250 / mnd</div><div class="prop-addr">Laan van Chartroise 3, Utrecht</div><div class="prop-meta"><span>2 kamers</span><span>88 m²</span></div></div></div>
-        <div class="prop-card"><div class="prop-img-wrap"><img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&q=80" alt=""><span class="prop-tag t-koop">Te koop</span></div><div class="prop-body"><div class="prop-price">€ 450.000</div><div class="prop-addr">Vredenburg 10, Utrecht</div><div class="prop-meta"><span>2 kamers</span><span>82 m²</span></div></div></div>
-        <div class="prop-card"><div class="prop-img-wrap"><img src="https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=400&q=80" alt=""><span class="prop-tag t-koop">Te koop</span></div><div class="prop-body"><div class="prop-price">€ 1.150.000</div><div class="prop-addr">Oudegracht 55, Utrecht</div><div class="prop-meta"><span>5 kamers</span><span>210 m²</span></div></div></div>
+        {{WONINGAANBOD_HTML}}
     </div>
 </div>
 
@@ -1176,23 +1164,9 @@
         <span class="fan-word">Leer ons</span>
         <span class="fan-word">kennen</span>
     </div>
-    <div class="card-fan" id="cardFan">
-        <div class="fan-card">
-            <img src="https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=500&q=85" alt="Jeroen">
+    <div class="team-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:18px;margin-top:32px;">
+            {{TEAM_HTML}}
         </div>
-        <div class="fan-card">
-            <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=500&q=85" alt="Lisa">
-        </div>
-        <div class="fan-card">
-            <img src="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=500&q=85" alt="Nora">
-        </div>
-        <div class="fan-card">
-            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=85" alt="Thomas">
-        </div>
-        <div class="fan-card">
-            <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=500&q=85" alt="Sophie">
-        </div>
-    </div>
     <div class="fan-cta-wrap" style="text-align:center;">
         <a href="#contact" class="fan-cta">
             Ontmoet het team
@@ -1428,33 +1402,7 @@ function confirmBooking(btn) {
     <h2 class="section-h2">Meer lezen</h2>
     <p class="section-sub">Deze artikelen verbeteren je zichtbaarheid online ;)</p>
     <div class="blogs-grid">
-        <a href="#" class="blog-card">
-            <img src="https://images.unsplash.com/photo-1560520653-9e0e4c89eb11?w=500&q=80" alt="">
-            <div class="blog-body">
-                <div class="blog-cat">Verkooptips</div>
-                <div class="blog-title">5 tips om uw woning boven de vraagprijs te verkopen in 2026</div>
-                <div class="blog-snip">De Utrechtse markt blijft competitief. Ontdek hoe u zich onderscheidt en de beste prijs haalt.</div>
-                <div class="blog-meta"><span>Jeroen van Dijk</span><span>·</span><span>8 april 2026</span></div>
-            </div>
-        </a>
-        <a href="#" class="blog-card">
-            <img src="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=500&q=80" alt="">
-            <div class="blog-body">
-                <div class="blog-cat">Marktupdate</div>
-                <div class="blog-title">Woningmarkt Utrecht 2026: prijzen, trends en verwachtingen</div>
-                <div class="blog-snip">Onze analyse van de meest recente NVM-cijfers en wat dat betekent voor kopers en verkopers.</div>
-                <div class="blog-meta"><span>Lisa Vermeer</span><span>·</span><span>1 maart 2026</span></div>
-            </div>
-        </a>
-        <a href="#" class="blog-card">
-            <img src="https://images.unsplash.com/photo-1554469384-e58fac16e23a?w=500&q=80" alt="">
-            <div class="blog-body">
-                <div class="blog-cat">Kooptips</div>
-                <div class="blog-title">Energielabel bij aankoop: waarom het meer waard is dan u denkt</div>
-                <div class="blog-snip">Een goed energielabel scheelt niet alleen in maandlasten — het bepaalt ook uw hypotheekmogelijkheden.</div>
-                <div class="blog-meta"><span>Thomas de Groot</span><span>·</span><span>15 februari 2026</span></div>
-            </div>
-        </a>
+        {{BLOG_HTML}}
     </div>
 </div>
 
