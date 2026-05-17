@@ -1332,6 +1332,23 @@ def _status_class(status: Optional[str]) -> str:
     return "t-koop"
 
 
+TRACKING_DOMAIN = __import__("os").environ.get("TRACKING_DOMAIN", "localhost:5050")
+
+
+def build_tracking_pixel_url(lead_id: str, slug: str) -> str:
+    """Bouw de tracking-pixel URL voor event='open'.
+
+    Gebruikt `TRACKING_DOMAIN` uit `.env`. Voor `localhost` (en `127.0.0.1`)
+    wordt http gebruikt, anders https.
+    """
+    from urllib.parse import quote_plus
+    scheme = "http" if TRACKING_DOMAIN.startswith(("localhost", "127.0.0.1")) else "https"
+    return (
+        f"{scheme}://{TRACKING_DOMAIN}/track-demo?"
+        f"lead_id={quote_plus(lead_id)}&event=open&slug={quote_plus(slug)}"
+    )
+
+
 def build_nav_html(nav_items: list[str]) -> str:
     """Genereer aaneengesloten `<a href="#">tekst</a>` tags voor de nav-bar."""
     if not nav_items:
@@ -1676,7 +1693,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument(
         "--sector",
         required=True,
-        help="Sector ('makelaardij', 'tandartsen', …) — voedt de nav fallback.",
+        help="Sector (gebruik 'makelaardij') — voedt de nav fallback.",
     )
     parser.add_argument(
         "--no-push",
