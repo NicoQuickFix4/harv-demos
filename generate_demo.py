@@ -1544,6 +1544,117 @@ def update_notion_after_demo(notion_page_id: Optional[str], demo_url: str) -> bo
     return False
 
 
+HARV_SCRAPER_DIR = Path.home() / "Developer" / "harv-scraper"
+
+
+def _import_harv_db(scraper_dir: Path = HARV_SCRAPER_DIR):
+    """Importeer het `db` module van harv-scraper via sys.path-injectie.
+
+    Wordt lazy gedaan zodat generate_demo.py ook werkt als harv-scraper niet
+    bestaat (bv. in een geïsoleerde demo-only-deploy of unit-test).
+    """
+    import importlib
+    import sys
+    scraper_dir = Path(scraper_dir)
+    if not (scraper_dir / "db.py").exists():
+        raise FileNotFoundError(f"harv-scraper db.py niet gevonden in {scraper_dir}")
+    if str(scraper_dir) not in sys.path:
+        sys.path.insert(0, str(scraper_dir))
+    return importlib.import_module("db")
+
+
+def _notion_patch_demo_link(
+    notion_page_id: str,
+    demo_url: str,
+    notion_token: str,
+) -> tuple[bool, Optional[str]]:
+    """PATCH alleen het Demo-link veld. Returns (success, error_message)."""
+    payload = {"properties": {"Demo-link": {"url": demo_url}}}
+    headers = {
+        "Authorization": f"Bearer {notion_token}",
+        "Content-Type": "application/json",
+        "Notion-Version": _NOTION_VERSION,
+    }
+    try:
+        resp = requests.patch(
+            f"{_NOTION_API_BASE}/pages/{notion_page_id}",
+            headers=headers,
+            json=payload,
+            timeout=20,
+        )
+        if resp.status_code == 200:
+            return True, None
+        return False, f"HTTP {resp.status_code}: {resp.text[:300]}"
+    except requests.RequestException as exc:
+        return False, f"{type(exc).__name__}: {exc}"
+
+
+def update_lead_after_deploy(
+    notion_page_id: Optional[str],
+    demo_url: str,
+    *,
+    db_path: Optional[Path] = None,
+    scraper_dir: Path = HARV_SCRAPER_DIR,
+    notion_token: Optional[str] = None,
+) -> dict[str, Any]:
+    """Werk SQLite-fase + Notion Demo-link bij na een succesvolle demo-deploy.
+
+    Stappen:
+      1. Lookup lead in SQLite via `notion_page_id`.
+      2. SQLite fase → 'demo_verstuurd' (alleen als de lead gevonden is).
+      3. PATCH Notion Demo-link (alleen als token + notion_page_id beschikbaar).
+
+    Beide stappen worden onafhankelijk geprobeerd zodat één faal de ander
+    niet meeneemt. Returns een statusdict met booleans + foutmeldingen.
+    """
+    result: dict[str, Any] = {
+        "notion_page_id": notion_page_id,
+        "demo_url": demo_url,
+        "lead_found": False,
+        "sqlite_updated": False,
+        "notion_updated": False,
+        "lead_id": None,
+        "errors": [],
+    }
+
+    if not notion_page_id:
+        result["errors"].append("notion_page_id ontbreekt — niets bij te werken.")
+        return result
+
+    # 1+2: SQLite
+    try:
+        db = _import_harv_db(scraper_dir)
+        kwargs = {"db_path": db_path} if db_path else {}
+        lead = db.get_lead_by_notion_page_id(notion_page_id, **kwargs)
+        if lead is None:
+            result["errors"].append(f"geen lead in SQLite met notion_page_id={notion_page_id}")
+        else:
+            result["lead_found"] = True
+            result["lead_id"] = lead["id"]
+            if db.update_lead_fase(lead["id"], "demo_verstuurd", **kwargs):
+                result["sqlite_updated"] = True
+            else:
+                result["errors"].append("update_lead_fase gaf rowcount=0")
+    except FileNotFoundError as exc:
+        result["errors"].append(f"SQLite-stap overgeslagen: {exc}")
+    except Exception as exc:  # noqa: BLE001 — defensief, mag geen crash veroorzaken
+        result["errors"].append(f"SQLite-stap fout: {type(exc).__name__}: {exc}")
+
+    # 3: Notion
+    if notion_token is None:
+        import os
+        notion_token = os.environ.get("NOTION_TOKEN") or os.environ.get("NOTION_API_KEY", "")
+    if notion_token:
+        ok, err = _notion_patch_demo_link(notion_page_id, demo_url, notion_token)
+        result["notion_updated"] = ok
+        if err:
+            result["errors"].append(f"Notion: {err}")
+    else:
+        result["errors"].append("NOTION_TOKEN ontbreekt — Notion-stap overgeslagen.")
+
+    return result
+
+
 def scrape_site_data(url: str, sector: Optional[str] = None) -> dict[str, Any]:
     """Haal alle data van een leadwebsite en geef een nested dict terug.
 
@@ -1750,9 +1861,14 @@ def main(argv: Optional[list[str]] = None) -> int:
         )
         return 0
     if verify_deploy(slug):
-        update_notion_after_demo(
-            args.notion_page_id, f"{DEPLOY_BASE_URL}/demo/{slug}/"
-        )
+        demo_url = f"{DEPLOY_BASE_URL}/demo/{slug}/"
+        status = update_lead_after_deploy(args.notion_page_id, demo_url)
+        if status["sqlite_updated"]:
+            print(f"✅ SQLite fase → demo_verstuurd  (lead_id={status['lead_id']})")
+        if status["notion_updated"]:
+            print(f"✅ Notion Demo-link bijgewerkt op pagina {(args.notion_page_id or '')[:8]}…")
+        for err in status["errors"]:
+            print(f"⚠ {err}")
     return 0
 
 
