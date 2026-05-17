@@ -85,6 +85,12 @@ NAV_FALLBACKS: dict[str, list[str]] = {
     "makelaardij": ["Home", "Woningaanbod", "Over ons", "Diensten", "Contact"],
 }
 NAV_FALLBACK_DEFAULT = ["Home", "Over ons", "Diensten", "Contact"]
+_NAV_SKIP_CLASSES = (
+    "skip", "sr-only", "screen-reader", "screenreader", "visually-hidden", "a11y",
+)
+_NAV_NOISE_CONTAINER_HINTS = (
+    "filter", "toolbar", "search-bar", "sort-bar", "view-toggle", "viewtoggle", "tabbar",
+)
 CERT_KEYWORDS = (
     "gecertificeerd", "erkend lid", "iso 9001", "iso 14001",
     "nvm makelaar", "vastgoedcert", "keurmerk", "award winner",
@@ -448,9 +454,15 @@ def extract_nav_items(
       2. <header> element
       3. elementen met class 'menu' / 'nav' / 'navigation'
 
-    Filters: externe links (http(s)... naar ander domein), tekst > 25 chars,
-    lege strings, duplicaten. Maximaal 6 items terug. Bij geen treffer:
-    fallback op basis van sector.
+    Per kandidaat-container: prefereer top-level structuur
+    (`<ul> > <li> > <a>`) zodat mega-menu submenu-items niet meekomen, en val
+    pas daarna terug op een flat anchor-scan. Filters per anchor:
+      * externe links (http(s)... naar ander domein dan eigen host)
+      * tekst > 25 chars / leeg / symbol-only
+      * skip-to-content / screen-reader-only / aria-hidden anchors
+      * duplicaten (case-insensitive)
+    Containers die duidelijk een filter-/toolbar-/sorteer-UI zijn, worden
+    overgeslagen. Bij geen treffer: sector-fallback (anders generic default).
     """
     own_host = (urlparse(base_url).hostname or "").lower() if base_url else None
 
@@ -467,38 +479,107 @@ def extract_nav_items(
             return False
         return True
 
-    candidates: list[Tag] = []
-    nav = soup.find("nav")
-    if nav:
-        candidates.append(nav)
-    header = soup.find("header")
-    if header:
-        candidates.append(header)
-    for cls in ("menu", "nav", "navigation"):
-        for el in soup.find_all(attrs={"class": re.compile(rf"\b{cls}\b", re.I)}):
-            candidates.append(el)
+    def _is_skip_link(a_tag: Tag) -> bool:
+        classes = " ".join(a_tag.get("class") or []).lower()
+        if any(skip in classes for skip in _NAV_SKIP_CLASSES):
+            return True
+        if (a_tag.get("aria-hidden") or "").lower() == "true":
+            return True
+        return False
 
-    items: list[str] = []
-    seen: set[str] = set()
-    for container in candidates:
-        for a in container.find_all("a"):
+    def _is_noise_container(container: Tag) -> bool:
+        blob = " ".join(
+            filter(None, [
+                " ".join(container.get("class") or []).lower(),
+                (container.get("id") or "").lower(),
+                (container.get("role") or "").lower(),
+            ])
+        )
+        return any(hint in blob for hint in _NAV_NOISE_CONTAINER_HINTS)
+
+    def _is_acceptable(text: str) -> bool:
+        if not text or len(text) > 25:
+            return False
+        # Symbol-only / single-char items uitsluiten ('▼', '☰', '×').
+        if not any(c.isalpha() for c in text):
+            return False
+        return True
+
+    def _collect_top_level(container: Tag) -> list[str]:
+        """Pak de eerste <a> uit elk direct <li>-kind van de eerste <ul>."""
+        ul = container.find("ul")
+        if ul is None:
+            return []
+        out: list[str] = []
+        seen_local: set[str] = set()
+        for li in ul.find_all("li", recursive=False):
+            a = li.find("a")  # eerste anchor = top-level link
+            if a is None or _is_skip_link(a):
+                continue
             text = _text(a)
-            if not text or len(text) > 25:
+            if not _is_acceptable(text):
                 continue
             if _is_external(a.get("href", "")):
                 continue
             key = text.lower()
-            if key in seen:
+            if key in seen_local:
                 continue
-            seen.add(key)
-            items.append(text)
-            if len(items) >= 6:
-                return items
-        if items:
-            break
+            seen_local.add(key)
+            out.append(text)
+            if len(out) >= 6:
+                break
+        return out
 
-    if items:
-        return items[:6]
+    def _collect_flat(container: Tag) -> list[str]:
+        out: list[str] = []
+        seen_local: set[str] = set()
+        for a in container.find_all("a"):
+            if _is_skip_link(a):
+                continue
+            text = _text(a)
+            if not _is_acceptable(text):
+                continue
+            if _is_external(a.get("href", "")):
+                continue
+            key = text.lower()
+            if key in seen_local:
+                continue
+            seen_local.add(key)
+            out.append(text)
+            if len(out) >= 6:
+                break
+        return out
+
+    candidates: list[Tag] = []
+    seen_containers: set[int] = set()
+
+    def _add(container) -> None:
+        if container is None or id(container) in seen_containers:
+            return
+        seen_containers.add(id(container))
+        candidates.append(container)
+
+    _add(soup.find("nav"))
+    _add(soup.find("header"))
+    for cls in ("menu", "nav", "navigation"):
+        for el in soup.find_all(attrs={"class": re.compile(rf"\b{cls}\b", re.I)}):
+            _add(el)
+
+    weak: list[str] = []
+    for container in candidates:
+        if _is_noise_container(container):
+            continue
+        top = _collect_top_level(container)
+        if len(top) >= 3:
+            return top
+        flat = _collect_flat(container)
+        if len(flat) >= 3:
+            return flat
+        if (top or flat) and not weak:
+            weak = top or flat
+
+    if len(weak) >= 2:
+        return weak
 
     sector_key = (sector or "").strip().lower()
     return list(NAV_FALLBACKS.get(sector_key, NAV_FALLBACK_DEFAULT))
