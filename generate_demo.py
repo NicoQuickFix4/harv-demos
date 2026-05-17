@@ -1332,29 +1332,48 @@ def _status_class(status: Optional[str]) -> str:
     return "t-koop"
 
 
-def render_woningaanbod_html(woningen: list[dict[str, Any]]) -> str:
-    """Genereer .prop-card markup voor het woningaanbod-grid."""
+def build_nav_html(nav_items: list[str]) -> str:
+    """Genereer aaneengesloten `<a href="#">tekst</a>` tags voor de nav-bar."""
+    if not nav_items:
+        return ""
+    return "".join(f'<a href="#">{_html_escape(item)}</a>' for item in nav_items)
+
+
+def build_woningaanbod_html(
+    woningen: list[dict[str, Any]],
+    primaire_kleur: Optional[str] = None,
+) -> str:
+    """Genereer .prop-card markup voor het woningaanbod-grid.
+
+    `primaire_kleur` wordt — als opgegeven — gebruikt voor de inline kleur van
+    de prijs-regel zodat de kaartjes altijd 'gebrand' kleuren, óók als de
+    template-CSS-variabele niet correct gevuld is.
+    """
     if not woningen:
         return ""
+    price_style = ""
+    if primaire_kleur:
+        price_style = f' style="color: {_html_escape(primaire_kleur)};"'
     cards: list[str] = []
     for w in woningen:
         foto = _html_escape(w.get("foto") or "")
         prijs = _html_escape(w.get("prijs") or "")
         status = w.get("status") or "Te koop"
         plaats = _html_escape(w.get("plaats") or "")
+        img_tag = f'<img src="{foto}" alt="">' if foto else ""
         cards.append(
             '<div class="prop-card">'
-            f'<div class="prop-img-wrap"><img src="{foto}" alt="">'
+            f'<div class="prop-img-wrap">{img_tag}'
             f'<span class="prop-tag {_status_class(status)}">{_html_escape(status)}</span></div>'
             '<div class="prop-body">'
-            f'<div class="prop-price">{prijs}</div>'
+            f'<div class="prop-price"{price_style}>{prijs}</div>'
             f'<div class="prop-addr">{plaats}</div>'
             '</div></div>'
         )
     return "\n        ".join(cards)
 
 
-def render_team_html(team: list[dict[str, Any]]) -> str:
+def build_team_html(team: list[dict[str, Any]]) -> str:
     """Genereer .team-card markup."""
     if not team:
         return ""
@@ -1363,9 +1382,10 @@ def render_team_html(team: list[dict[str, Any]]) -> str:
         foto = _html_escape(p.get("foto") or "")
         naam = _html_escape(p.get("naam") or "")
         functie = _html_escape(p.get("functie") or "")
+        img_tag = f'<img src="{foto}" alt="{naam}">' if foto else ""
         cards.append(
             '<div class="team-card">'
-            f'<img src="{foto}" alt="{naam}">'
+            f'{img_tag}'
             '<div class="team-info">'
             f'<div class="team-name">{naam}</div>'
             f'<div class="team-role">{functie}</div>'
@@ -1374,7 +1394,7 @@ def render_team_html(team: list[dict[str, Any]]) -> str:
     return "\n        ".join(cards)
 
 
-def render_blog_html(blog_posts: list[dict[str, Any]]) -> str:
+def build_blog_html(blog_posts: list[dict[str, Any]]) -> str:
     """Genereer .blog-card markup (matchend met de bestaande template-CSS)."""
     if not blog_posts:
         return ""
@@ -1394,6 +1414,12 @@ def render_blog_html(blog_posts: list[dict[str, Any]]) -> str:
             + '</div></a>'
         )
     return "\n        ".join(cards)
+
+
+# Backwards compat: oude `render_*` namen blijven werken als aliassen.
+render_woningaanbod_html = build_woningaanbod_html
+render_team_html = build_team_html
+render_blog_html = build_blog_html
 
 
 # ─── Fase-2 orchestrator ────────────────────────────────────────────────────
