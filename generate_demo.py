@@ -1439,6 +1439,119 @@ render_team_html = build_team_html
 render_blog_html = build_blog_html
 
 
+# ─── Template-render-stap ────────────────────────────────────────────────────
+
+TEMPLATES_ROOT = REPO_ROOT / "templates"
+# Sector → template-bestand. Voeg hier een regel toe als een sector-template klaar is.
+SECTOR_TEMPLATES: dict[str, str] = {
+    "makelaardij": "makelaardij-a.html",
+    "dakdekker": "dakdekkers-a.html",
+    "dakdekkers": "dakdekkers-a.html",
+}
+
+
+def _team_for_caption(team: list[dict[str, Any]], ai_content: dict[str, Any]) -> list[dict[str, Any]]:
+    """Als er geen namen zijn, vul de anonieme AI-caption als 'naam' in zodat de
+    team-kaarten niet leeg ogen (regel: nooit een lege naam tonen)."""
+    if ai_content.get("team_mode") == "named":
+        return team
+    caption = ai_content.get("team_caption") or "Ons team"
+    out = []
+    for p in team:
+        q = dict(p)
+        if not q.get("naam"):
+            q["naam"] = caption
+        out.append(q)
+    return out
+
+
+def render_demo(
+    *,
+    slug: str,
+    sector: str,
+    data: dict[str, Any],
+    lead_id: str = "",
+    notion_id: str = "",
+    regio: Optional[str] = None,
+    stad: Optional[str] = None,
+    template_path: Optional[Path] = None,
+    write: bool = True,
+    require_ai: bool = True,
+) -> str:
+    """Vul de sector-template met scrape-data + AI-content + de Harv-widget.
+
+    Dit is de ontbrekende schakel: het leest de template, vervangt ALLE
+    placeholders (de bestaande {{...}} én de nieuwe {{HARV_*}}) en schrijft
+    `public/demo/<slug>/index.html`. Retourneert de gerenderde HTML.
+
+    AI is verplicht: bij `require_ai=True` (standaard) gooit een mislukte
+    AI-call `harv_kit.AIContentError` — de demo wordt dan NIET geschreven, zodat
+    er nooit een demo zonder AI-content live gaat. Zet `require_ai=False` alleen
+    voor previews/tests.
+    """
+    import harv_kit as hk
+
+    sector_key = (sector or "").strip().lower()
+    if template_path is None:
+        tpl_name = SECTOR_TEMPLATES.get(sector_key)
+        if not tpl_name:
+            raise ValueError(f"Geen template bekend voor sector '{sector}'. "
+                             f"Bekend: {sorted(SECTOR_TEMPLATES)}")
+        template_path = TEMPLATES_ROOT / tpl_name
+    template_path = Path(template_path)
+    if not template_path.exists():
+        raise FileNotFoundError(f"Template niet gevonden: {template_path}")
+
+    html = template_path.read_text(encoding="utf-8")
+
+    # AI-content één keer; daarna hergebruikt voor zowel placeholders als team.
+    ai_content = hk.ai_demo_content(
+        data, sector=sector_key or "dakdekker", regio=regio, stad=stad, require=require_ai
+    )
+
+    bedrijfsnaam = data.get("bedrijfsnaam") or ai_content.get("display_name") or ""
+    primaire_kleur = data.get("primaire_kleur") or hk._detect_brand(data)
+    team_in = data.get("team") or []
+    team_cards = _team_for_caption(team_in, ai_content)
+
+    # Bestaande placeholders
+    base: dict[str, str] = {
+        "{{PRIMAIRE_KLEUR}}": primaire_kleur,
+        "{{LOGO_URL}}": data.get("logo_url") or "",
+        "{{NAV_ITEMS}}": build_nav_html(data.get("nav_items") or []),
+        "{{TAGLINE}}": data.get("tagline") or ai_content.get("local_intro") or "",
+        "{{TEAM_HTML}}": build_team_html(team_cards),
+        "{{BLOG_HTML}}": build_blog_html(data.get("blog_posts") or []),
+        "{{WONINGAANBOD_HTML}}": build_woningaanbod_html(data.get("woningaanbod") or [], primaire_kleur),
+        "{{TRACKING_PIXEL}}": build_tracking_pixel_url(lead_id, slug) if lead_id else "",
+        "{{BEDRIJFSNAAM}}": _html_escape(bedrijfsnaam),
+    }
+
+    # Nieuwe Harv-kit placeholders (widget, presented-by, guard-css, lokale teksten)
+    kit = hk.kit_placeholders(
+        data,
+        lead_id=lead_id,
+        slug=slug,
+        notion_id=notion_id,
+        sector=sector_key or "dakdekker",
+        regio=regio,
+        stad=stad,
+        brand=primaire_kleur,
+        ai_content=ai_content,
+    )
+
+    for token, value in {**base, **kit}.items():
+        html = html.replace(token, value or "")
+
+    if write:
+        out_file = PUBLIC_ROOT / "demo" / slug / "index.html"
+        out_file.parent.mkdir(parents=True, exist_ok=True)
+        out_file.write_text(html, encoding="utf-8")
+        print(f"🖼  demo gerenderd → {out_file.relative_to(REPO_ROOT)}")
+
+    return html
+
+
 # ─── Fase-2 orchestrator ────────────────────────────────────────────────────
 
 def scrape_full_site_data(url: str, sector: str) -> dict[str, Any]:
