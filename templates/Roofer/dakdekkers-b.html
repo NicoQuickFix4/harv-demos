@@ -1,0 +1,2212 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>if (window.self !== window.top) document.documentElement.className += " is-framed";</script>
+<title>{{META_TITLE}}</title>
+<meta name="description" content="Uw dakdekker voor reparatie, onderhoud en een compleet nieuw dak. Vakkundig werk en een vrijblijvende offerte." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<style>
+/* ============================================================
+   Template B (helder) — demo generator template
+   Vivid cobalt + warm amber on bright white. OKLCH throughout.
+   ============================================================ */
+
+:root {
+  /* Neutrals : cool near-white, true ink */
+  --bg:        oklch(0.995 0.003 250);
+  --surface:   oklch(0.975 0.006 250);
+  --surface-2: oklch(0.955 0.009 250);
+  --line:      oklch(0.905 0.012 250);
+  --line-soft: oklch(0.935 0.010 250);
+  --ink:       oklch(0.255 0.028 255);
+  --ink-soft:  oklch(0.430 0.030 255);
+  --ink-faint: oklch(0.560 0.028 255);
+
+  /* Generator brand bridge: the generator appends a style#harv-brand rule that
+     sets --c-accent / --c-dark with !important to recolour the brand. We bridge
+     those tokens onto helder's cobalt --blue role here, so the injected colour
+     drives the brand WITHOUT changing the default look (defaults below = helder
+     cobalt). The amber CTA is deliberately NOT bridged (rule B2): it keeps its
+     own accent and never inherits the injected brand colour. */
+  --c-accent:      oklch(0.55 0.16 250);   /* helder cobalt default; generator overrides */
+  --c-accent-soft: oklch(0.64 0.15 245);
+  --c-dark:        oklch(0.31 0.10 257);
+  --c-dark-soft:   oklch(0.47 0.16 252);
+
+  /* Primary : vivid cobalt / azure (follows the injected brand via the bridge) */
+  --blue:        var(--c-accent);
+  --blue-strong: var(--c-dark-soft);
+  --blue-bright: var(--c-accent-soft);
+  --blue-deep:   var(--c-dark);
+  --blue-tint:   oklch(0.955 0.022 250);
+  --blue-tint-2: oklch(0.915 0.040 250);
+  --on-blue:     oklch(0.985 0.012 250);
+
+  /* Accent : warm amber, CTA + urgency ONLY */
+  --amber:        oklch(0.745 0.165 64);
+  --amber-strong: oklch(0.695 0.170 56);
+  --amber-deep:   oklch(0.46 0.12 56);
+  --amber-tint:   oklch(0.955 0.040 75);
+  --on-amber:     oklch(0.28 0.08 60);
+
+  --star: #fbbc04;
+  --ok:   oklch(0.62 0.13 155);
+  --err:  oklch(0.55 0.18 25);
+
+  --radius:    14px;
+  --radius-lg: 22px;
+  --radius-sm: 9px;
+
+  --shadow-sm: 0 1px 2px oklch(0.45 0.05 255 / 0.05), 0 2px 6px oklch(0.45 0.05 255 / 0.06);
+  --shadow-md: 0 4px 12px oklch(0.40 0.05 255 / 0.07), 0 10px 28px oklch(0.40 0.05 255 / 0.08);
+  --shadow-lg: 0 12px 30px oklch(0.35 0.06 255 / 0.12), 0 24px 56px oklch(0.35 0.06 255 / 0.12);
+  --shadow-amber: 0 6px 18px oklch(0.70 0.16 60 / 0.32);
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);          /* ease-out-quint-ish */
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --maxw: 1180px;
+  --gut: clamp(1.1rem, 4vw, 2.4rem);
+
+  /* z-index scale */
+  --z-base: 1;
+  --z-sticky: 100;
+  --z-header: 200;
+  --z-mobilebar: 300;
+  --z-menu: 400;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+body {
+  margin: 0;
+  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: clamp(1rem, 0.97rem + 0.18vw, 1.075rem);
+  line-height: 1.62;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4 {
+  margin: 0;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  font-weight: 800;
+  text-wrap: balance;
+  color: var(--ink);
+}
+p { margin: 0; text-wrap: pretty; }
+a { color: inherit; text-decoration: none; }
+img { display: block; max-width: 100%; }
+ul { margin: 0; padding: 0; list-style: none; }
+button { font-family: inherit; cursor: pointer; }
+
+.mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-feature-settings: "tnum" 1; }
+
+:focus-visible {
+  outline: 3px solid var(--blue-bright);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.wrap { width: 100%; max-width: var(--maxw); margin-inline: auto; padding-inline: var(--gut); }
+
+.section { padding-block: clamp(3.6rem, 7vw, 6.4rem); }
+
+.skip {
+  position: absolute; left: 0.6rem; top: -3.2rem;
+  background: var(--ink); color: var(--bg);
+  padding: 0.6rem 1rem; border-radius: 8px; z-index: var(--z-menu);
+  transition: top 0.18s var(--ease);
+}
+.skip:focus { top: 0.6rem; }
+
+/* ============================== Buttons ============================== */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.55rem;
+  font-weight: 700; font-size: 1.0rem; line-height: 1.1;
+  padding: 0.92rem 1.4rem;
+  border-radius: 11px; border: 1px solid transparent;
+  letter-spacing: -0.01em;
+  transition: transform 0.16s var(--ease), box-shadow 0.2s var(--ease), background 0.2s var(--ease), color 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+.btn svg { width: 1.15em; height: 1.15em; flex: none; }
+.btn-amber {
+  background: var(--amber); color: var(--on-amber);
+  box-shadow: var(--shadow-amber);
+}
+.btn-amber:hover { background: var(--amber-strong); transform: translateY(-2px); }
+.btn-amber:active { transform: translateY(0); }
+.btn-blue {
+  background: var(--blue); color: var(--on-blue);
+  box-shadow: 0 4px 14px oklch(0.55 0.16 250 / 0.28);
+}
+.btn-blue:hover { background: var(--blue-strong); transform: translateY(-2px); }
+.btn-ghost {
+  background: transparent; color: var(--ink); border-color: var(--line);
+}
+.btn-ghost:hover { border-color: var(--blue); color: var(--blue-strong); background: var(--blue-tint); }
+.btn-onblue {
+  background: oklch(1 0 0 / 0.14); color: var(--on-blue); border-color: oklch(1 0 0 / 0.4);
+}
+.btn-onblue:hover { background: oklch(1 0 0 / 0.22); transform: translateY(-2px); }
+.btn-lg { padding: 1.05rem 1.7rem; font-size: 1.08rem; }
+@media (prefers-reduced-motion: reduce) {
+  .btn:hover { transform: none; }
+}
+
+/* ============================== Header ============================== */
+.header {
+  position: sticky; top: 0; z-index: var(--z-header);
+  background: oklch(0.995 0.003 250 / 0.82);
+  backdrop-filter: saturate(1.4) blur(12px);
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.25s var(--ease), box-shadow 0.25s var(--ease), background 0.25s var(--ease);
+}
+.header.scrolled {
+  border-bottom-color: var(--line);
+  box-shadow: var(--shadow-sm);
+}
+.header-inner {
+  display: flex; align-items: center; gap: 1rem;
+  height: 70px;
+}
+.brand { display: flex; align-items: center; gap: 0.62rem; font-weight: 800; letter-spacing: -0.02em; font-size: 1.12rem; }
+.brand-mark {
+  width: 34px; height: 34px; flex: none;
+  display: grid; place-items: center;
+  background: var(--blue); color: var(--on-blue);
+  border-radius: 9px;
+}
+.brand-mark svg { width: 20px; height: 20px; }
+/* Optioneel echt logo (generator vult LOGO_URL); zonder src blijft de SVG-monogram staan. */
+.brand-logo-img { width: 100%; height: 100%; object-fit: contain; border-radius: 9px; }
+.brand-logo-img:not([src]), .brand-logo-img[src=""] { display: none; }
+.brand-mark:has(.brand-logo-img[src]:not([src=""])) { background: transparent; }
+.brand-mark:has(.brand-logo-img[src]:not([src=""])) svg { display: none; }
+.brand small { display: block; font-size: 0.66rem; font-weight: 600; color: var(--ink-faint); letter-spacing: 0.01em; margin-top: 1px; }
+.brand-txt { line-height: 1.05; }
+
+.nav { margin-left: auto; display: flex; align-items: center; gap: 0.35rem; }
+.nav a.navlink {
+  padding: 0.5rem 0.78rem; border-radius: 8px; font-weight: 600; font-size: 0.96rem; color: var(--ink-soft);
+  transition: color 0.16s var(--ease), background 0.16s var(--ease);
+}
+.nav a.navlink:hover { color: var(--ink); background: var(--surface-2); }
+.header-cta { display: flex; align-items: center; gap: 0.6rem; margin-left: 0.4rem; }
+.header-phone {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  font-weight: 700; color: var(--blue-strong); font-size: 0.98rem;
+  padding: 0.5rem 0.7rem; border-radius: 8px;
+}
+.header-phone:hover { background: var(--blue-tint); }
+.header-phone svg { width: 1.05em; height: 1.05em; }
+.header-quote { display: none; }
+.header.scrolled .header-quote { display: inline-flex; }
+
+.burger {
+  display: none; margin-left: auto;
+  width: 46px; height: 46px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--bg);
+  align-items: center; justify-content: center;
+}
+.burger svg { width: 24px; height: 24px; stroke: var(--ink); }
+
+@media (max-width: 940px) {
+  .nav { display: none; }
+  .burger { display: inline-flex; }
+}
+@media (max-width: 600px) {
+  /* Give the logo a touch more breathing room at the top on phones */
+  .header-inner { height: auto; padding-top: 16px; padding-bottom: 10px; align-items: center; }
+}
+
+/* Mobile menu */
+.mobile-menu {
+  position: fixed; inset: 0; z-index: var(--z-menu);
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  padding: 1.1rem var(--gut) 2rem;
+  transform: translateY(-100%);
+  visibility: hidden;
+  transition: transform 0.42s var(--ease-expo), visibility 0.42s;
+}
+.mobile-menu.open { transform: translateY(0); visibility: visible; }
+.mm-top { display: flex; align-items: center; height: 70px; }
+.mm-close {
+  margin-left: auto; width: 46px; height: 46px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--bg); display: grid; place-items: center;
+}
+.mm-close svg { width: 24px; height: 24px; stroke: var(--ink); }
+.mm-links { display: flex; flex-direction: column; gap: 0.2rem; margin-top: 1.2rem; }
+.mm-links a {
+  font-size: 1.5rem; font-weight: 700; padding: 0.7rem 0; letter-spacing: -0.02em;
+  border-bottom: 1px solid var(--line-soft);
+}
+.mm-foot { margin-top: auto; display: flex; flex-direction: column; gap: 0.7rem; padding-top: 1.4rem; }
+@media (prefers-reduced-motion: reduce) {
+  .mobile-menu { transition: visibility 0.01s; }
+}
+
+/* ============================== Hero ============================== */
+.hero { position: relative; overflow: hidden; }
+.hero-grid {
+  display: grid; grid-template-columns: 1.04fr 0.96fr; gap: clamp(1.6rem, 4vw, 3.2rem);
+  align-items: center;
+  padding-block: clamp(2.4rem, 5vw, 4.4rem) clamp(2.6rem, 5vw, 4.2rem);
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  background: var(--blue-tint); color: var(--blue-strong);
+  border: 1px solid var(--blue-tint-2);
+  padding: 0.4rem 0.8rem 0.4rem 0.6rem; border-radius: 9px;
+  font-weight: 700; font-size: 0.85rem; letter-spacing: -0.005em;
+}
+/* Badge alleen tonen als er echt iets staat (bv. "24/7 bereikbaar"); leeg = weg. */
+.hero-badge:has(.hero-badge-txt:empty) { display: none; }
+.hero-badge .dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--ok);
+  box-shadow: 0 0 0 4px oklch(0.62 0.13 155 / 0.18);
+}
+.hero h1 {
+  font-size: clamp(2.05rem, 1.2rem + 3.9vw, 4.3rem);
+  letter-spacing: -0.04em;
+  margin-top: 1.15rem;
+  line-height: 1.04;
+  overflow-wrap: break-word;
+}
+.hero h1 .em { color: var(--blue-strong); }
+.hero-sub {
+  font-size: clamp(1.06rem, 1rem + 0.4vw, 1.2rem);
+  color: var(--ink-soft); margin-top: 1.25rem; max-width: 33ch;
+  line-height: 1.55;
+}
+.hero-actions { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 1.7rem; }
+.hero-actions .btn { flex: 0 1 auto; }
+
+.trust-strip {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.55rem 1.05rem;
+  margin-top: 1.9rem; padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+}
+.trust-item { display: inline-flex; align-items: center; gap: 0.42rem; font-size: 0.92rem; font-weight: 600; color: var(--ink-soft); }
+.trust-item .stars { color: var(--star); letter-spacing: 0.06em; font-size: 0.95rem; }
+.trust-item strong { color: var(--ink); font-weight: 700; }
+.trust-sep { width: 1px; height: 16px; background: var(--line); }
+.trust-check { width: 16px; height: 16px; color: var(--blue); flex: none; }
+.trust-strip-mobile { display: none; }
+@media (max-width: 760px) {
+  .hero-copy .trust-strip { display: none; }                 /* desktop-strip verbergen op mobiel */
+  .trust-strip-mobile { display: flex; justify-content: center; margin-top: 1.2rem; padding-top: 1.2rem; }
+}
+
+/* Hero quote-widget mount (right column) */
+.hero-form-wrap { position: relative; min-width: 0; }
+.widget-trust {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem 1.1rem;
+  margin-top: 1rem; padding: 0;
+}
+.widget-trust li {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font-size: 0.86rem; font-weight: 600; color: var(--ink-soft);
+}
+.widget-trust svg { width: 15px; height: 15px; color: var(--ok); flex: none; }
+
+@media (max-width: 900px) {
+  .hero-grid { grid-template-columns: 1fr; gap: 1.8rem; }
+  .hero-copy { max-width: 60ch; }
+  .hero h1 { margin-top: 1rem; }
+  .hero-sub { max-width: 56ch; }
+  .hero-form-wrap { max-width: 560px; }
+}
+@media (max-width: 560px) {
+  .hero-actions { display: none; }
+  .hero-form-wrap { margin-inline: auto; max-width: 440px; }
+}
+
+/* ============================== Logos / reassurance band ============================== */
+.assure {
+  background: var(--blue-deep); color: var(--on-blue);
+}
+.assure-inner {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.4rem;
+  padding-block: clamp(2rem, 4vw, 2.8rem);
+}
+.assure-item { display: flex; gap: 0.85rem; align-items: flex-start; }
+.assure-ic {
+  width: 42px; height: 42px; flex: none; border-radius: 11px;
+  background: oklch(1 0 0 / 0.1); display: grid; place-items: center; color: oklch(0.82 0.10 245);
+}
+.assure-ic svg { width: 22px; height: 22px; }
+.assure-item h3 { font-size: 1.02rem; color: var(--on-blue); }
+.assure-item p { font-size: 0.88rem; color: oklch(0.84 0.03 250); margin-top: 0.2rem; line-height: 1.45; }
+@media (max-width: 820px) { .assure-inner { grid-template-columns: repeat(2, 1fr); gap: 1.5rem 1.2rem; } }
+@media (max-width: 420px) { .assure-inner { grid-template-columns: 1fr; } }
+
+/* ============================== Section heading ============================== */
+.sec-head { max-width: 40ch; margin-bottom: clamp(1.8rem, 3.5vw, 2.8rem); }
+.sec-head.center { margin-inline: auto; text-align: center; max-width: 46ch; }
+.sec-head h2 { font-size: clamp(1.85rem, 1.4rem + 1.9vw, 2.85rem); letter-spacing: -0.035em; }
+.sec-head p { color: var(--ink-soft); margin-top: 0.85rem; font-size: 1.06rem; max-width: 60ch; }
+.sec-head.center p { margin-inline: auto; }
+
+/* ============================== Diensten (varied rhythm) ============================== */
+.services { background: var(--surface); border-block: 1px solid var(--line-soft); }
+.svc-grid {
+  display: grid; gap: 1rem;
+  grid-template-columns: 1.5fr 1fr;
+  grid-template-areas:
+    "hero a"
+    "hero b"
+    "wide wide";
+}
+.svc {
+  position: relative; background: var(--bg); border: 1px solid var(--line);
+  border-radius: var(--radius-lg); overflow: hidden;
+  transition: transform 0.22s var(--ease), box-shadow 0.22s var(--ease), border-color 0.22s var(--ease);
+}
+.svc:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: var(--line); }
+@media (prefers-reduced-motion: reduce) { .svc:hover { transform: none; } }
+
+/* feature service */
+.svc-feature { grid-area: hero; display: flex; flex-direction: column; }
+.svc-feature .svc-img { aspect-ratio: 16 / 10; }
+.svc-feature .svc-body { padding: clamp(1.3rem, 2.5vw, 1.8rem); }
+.svc-feature h3 { font-size: clamp(1.35rem, 1.1rem + 0.9vw, 1.7rem); }
+.svc-feature .svc-desc { font-size: 1.02rem; }
+.svc-feature .svc-list { display: flex; flex-wrap: wrap; gap: 0.45rem 0.55rem; margin-top: 1.05rem; }
+.svc-tag {
+  font-size: 0.88rem; font-weight: 600; color: var(--ink-soft);
+  display: inline-flex; align-items: center;
+}
+.svc-tag:not(:last-child)::after {
+  content: "·"; margin-left: 0.55rem; color: var(--ink-faint); font-weight: 400;
+}
+.svc-img { overflow: hidden; }
+.svc-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s var(--ease); }
+.svc:hover .svc-img img { transform: scale(1.04); }
+@media (prefers-reduced-motion: reduce) { .svc:hover .svc-img img { transform: none; } }
+
+/* compact services */
+.svc-a { grid-area: a; }
+.svc-b { grid-area: b; }
+.svc-compact { display: grid; grid-template-columns: clamp(150px, 38%, 220px) 1fr; align-items: stretch; }
+.svc-compact .svc-img { aspect-ratio: auto; min-height: 168px; }
+.svc-compact .svc-body { padding: 1.1rem 1.2rem; }
+.svc-compact h3 { font-size: 1.1rem; }
+.svc-compact .svc-desc { font-size: 0.9rem; color: var(--ink-soft); margin-top: 0.3rem; line-height: 1.45; }
+
+/* wide service */
+.svc-wide { grid-area: wide; display: grid; grid-template-columns: 1.5fr 1fr; gap: 1rem; align-items: stretch; }
+.svc-wide .svc-body { padding: clamp(1.2rem, 2.4vw, 1.7rem); }
+.svc-wide .svc-img { align-self: stretch; min-height: 200px; }
+.svc-wide h3 { font-size: 1.3rem; }
+.svc-wide .svc-desc { font-size: 0.98rem; color: var(--ink-soft); margin-top: 0.4rem; max-width: 48ch; }
+
+.svc-desc { color: var(--ink-soft); margin-top: 0.5rem; }
+
+@media (max-width: 760px) {
+  .svc-grid { grid-template-columns: 1fr; grid-template-areas: "hero" "a" "b" "wide"; }
+  .svc-wide { grid-template-columns: 1fr; }
+  .svc-wide .svc-img { display: none; }
+  /* Compacte dienst-kaarten: afbeelding ~25% kleiner zodat alle tekst netjes in het vakje past */
+  .svc-compact { grid-template-columns: clamp(112px, 29%, 165px) 1fr; }
+  .svc-compact .svc-img { min-height: 126px; }
+}
+
+/* ============================== Werkwijze ============================== */
+.steps {
+  display: grid; gap: 1rem;
+  grid-template-columns: repeat(4, 1fr);
+  list-style: none; margin: 0; padding: 0;
+}
+.step {
+  position: relative; background: var(--bg); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 1.5rem 1.35rem 1.4rem;
+}
+.step-img { border-radius: var(--radius-sm); overflow: hidden; aspect-ratio: 16/10; margin-bottom: 1rem; }
+.step-img img { width: 100%; height: 100%; object-fit: cover; }
+.step-n {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 9px;
+  background: var(--blue); color: var(--on-blue);
+  font-weight: 700; font-size: 1.05rem; margin-bottom: 0.7rem;
+}
+.step h3 { font-size: 1.12rem; }
+.step p { color: var(--ink-soft); font-size: 0.94rem; margin-top: 0.4rem; line-height: 1.5; }
+.step-time { display: inline-flex; align-items: center; gap: 0.35rem; margin-top: 0.85rem; font-size: 0.82rem; font-weight: 700; color: var(--amber-deep); }
+.step-time svg { width: 14px; height: 14px; }
+@media (max-width: 920px) { .steps { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 460px) { .steps { grid-template-columns: 1fr; } .step-img { aspect-ratio: 16/9; } }
+
+/* ============================== Waarom / proof split ============================== */
+.why { background: var(--surface); border-block: 1px solid var(--line-soft); }
+.why-grid { display: grid; grid-template-columns: 0.95fr 1.05fr; gap: clamp(2rem, 5vw, 4rem); align-items: center; }
+.why-reasons { display: flex; flex-direction: column; gap: 1.15rem; margin-top: 1.6rem; }
+.why-reason { display: grid; grid-template-columns: 44px 1fr; gap: 0.95rem; align-items: start; }
+.why-ic {
+  width: 44px; height: 44px; border-radius: 11px; flex: none;
+  background: var(--blue-tint); color: var(--blue-strong);
+  display: grid; place-items: center; border: 1px solid var(--blue-tint-2);
+}
+.why-ic svg { width: 22px; height: 22px; }
+.why-reason h3 { font-size: 1.08rem; }
+.why-reason p { color: var(--ink-soft); font-size: 0.95rem; margin-top: 0.18rem; line-height: 1.5; }
+
+.why-mosaic { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1.1fr 0.9fr; gap: 0.8rem; aspect-ratio: 1/1; }
+.why-mosaic figure { margin: 0; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm); }
+.why-mosaic img { width: 100%; height: 100%; object-fit: cover; }
+.why-mosaic .m1 { grid-row: 1 / span 2; }
+@media (max-width: 880px) {
+  .why-grid { grid-template-columns: 1fr; }
+  .why-mosaic { order: -1; aspect-ratio: 16/10; max-width: 560px; }
+}
+
+/* ============================== Cijfers (non-generic) ============================== */
+.stats { background: var(--blue-deep); color: var(--on-blue); }
+.stats-inner { display: grid; grid-template-columns: auto 1fr; gap: clamp(1.6rem, 4vw, 3.5rem); align-items: center; }
+.stats-lead { max-width: 24ch; }
+.stats-lead h2 { color: var(--on-blue); font-size: clamp(1.6rem, 1.3rem + 1.3vw, 2.3rem); letter-spacing: -0.035em; }
+.stats-lead p { color: oklch(0.84 0.03 250); margin-top: 0.7rem; }
+.stat-row { display: grid; grid-template-columns: repeat(4, 1fr); }
+.stat {
+  padding: 0.4rem 0; padding-left: clamp(1rem, 2.4vw, 1.8rem);
+  border-left: 1px solid oklch(1 0 0 / 0.16);
+}
+.stat:first-child { padding-left: 0; border-left: none; }
+.stat .num { font-size: clamp(2rem, 1.5rem + 2.2vw, 3rem); font-weight: 800; letter-spacing: -0.04em; line-height: 1; color: var(--on-blue); }
+.stat .num .suf { color: oklch(0.80 0.12 245); }
+.stat .lbl { font-size: 0.86rem; color: oklch(0.84 0.03 250); margin-top: 0.55rem; font-weight: 600; line-height: 1.35; }
+@media (max-width: 880px) {
+  .stats-inner { grid-template-columns: 1fr; gap: 1.8rem; }
+  .stat-row { grid-template-columns: repeat(2, 1fr); gap: 1.4rem 0; }
+  .stat { border-left: none; padding-left: 0; }
+  .stat:nth-child(even) { padding-left: clamp(1rem, 4vw, 1.8rem); border-left: 1px solid oklch(1 0 0 / 0.16); }
+}
+
+/* ============================== Projecten ============================== */
+.projects-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: clamp(1.1rem, 2.5vw, 1.8rem); }
+.project { border-radius: var(--radius-lg); overflow: hidden; background: var(--bg); border: 1px solid var(--line); }
+.project-img { aspect-ratio: 16/11; overflow: hidden; }
+.project-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s var(--ease); }
+.project:hover .project-img img { transform: scale(1.04); }
+@media (prefers-reduced-motion: reduce) { .project:hover .project-img img { transform: none; } }
+.project-body { padding: 1.4rem 1.5rem 1.5rem; }
+.project-meta { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.82rem; font-weight: 700; color: var(--blue-strong); }
+.project-meta svg { width: 14px; height: 14px; }
+.project h3 { font-size: 1.22rem; margin-top: 0.6rem; }
+.project p { color: var(--ink-soft); font-size: 0.96rem; margin-top: 0.5rem; }
+.project .done { display: inline-flex; align-items: center; gap: 0.4rem; margin-top: 0.9rem; font-size: 0.84rem; font-weight: 700; color: var(--ok); }
+.project .done svg { width: 15px; height: 15px; }
+@media (max-width: 720px) { .projects-grid { grid-template-columns: 1fr; } }
+
+/* ============================== Reviews + team ============================== */
+.rev-team { background: var(--surface); border-block: 1px solid var(--line-soft); }
+.reviews-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+.review { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.4rem 1.4rem 1.3rem; display: flex; flex-direction: column; }
+.review .stars { color: var(--star); letter-spacing: 0.08em; font-size: 0.95rem; }
+.review blockquote { margin: 0.7rem 0 0; font-size: 1.0rem; line-height: 1.55; color: var(--ink); font-weight: 500; }
+.review figcaption { margin-top: auto; padding-top: 1rem; font-size: 0.88rem; color: var(--ink-faint); font-weight: 600; }
+@media (max-width: 860px) { .reviews-grid { grid-template-columns: 1fr; } }
+/* In de mobiele preview (binnen het telefoon-iframe) reviews altijd netjes onder elkaar. */
+.is-framed .reviews-grid { grid-template-columns: 1fr !important; }
+/* Mobiel: review-kaarten iets breder/platter (minder padding → tekst gebruikt meer breedte). */
+@media (max-width: 760px) { .review { padding: 1rem 1.1rem 0.95rem; } }
+
+.team-block { margin-top: clamp(2.4rem, 5vw, 3.4rem); }
+.team-head { display: flex; align-items: baseline; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1.3rem; }
+.team-head h3 { font-size: clamp(1.4rem, 1.2rem + 0.8vw, 1.8rem); letter-spacing: -0.03em; }
+.team-head p { color: var(--ink-soft); font-size: 0.98rem; }
+.team-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.9rem; }
+.member { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.25rem 1.25rem 1.3rem; }
+.member .mono-mark {
+  width: 50px; height: 50px; border-radius: 12px;
+  display: grid; place-items: center; font-weight: 600; font-size: 1.02rem;
+  background: var(--blue-tint); color: var(--blue-strong); border: 1px solid var(--blue-tint-2);
+  margin-bottom: 0.85rem;
+}
+.member h4 { font-size: 1.05rem; letter-spacing: -0.02em; }
+.member .role { color: var(--ink-soft); font-size: 0.9rem; margin-top: 0.2rem; }
+@media (max-width: 880px) { .team-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 400px) { .team-grid { grid-template-columns: 1fr; } }
+/* "De ploeg die langskomt" volledig weglaten op mobiel (gebruikerswens) */
+@media (max-width: 760px) { .team-block { display: none; } }
+
+/* ============================== Kennis / blog ============================== */
+.articles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; }
+.article { display: flex; flex-direction: column; border-radius: var(--radius); overflow: hidden; background: var(--bg); border: 1px solid var(--line); transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease); }
+.article:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+@media (prefers-reduced-motion: reduce) { .article:hover { transform: none; } }
+.article-img { aspect-ratio: 16/10; overflow: hidden; }
+.article-img img { width: 100%; height: 100%; object-fit: cover; }
+.article-body { padding: 1.15rem 1.25rem 1.3rem; display: flex; flex-direction: column; flex: 1; }
+.article .tag { align-self: flex-start; font-size: 0.8rem; font-weight: 700; letter-spacing: -0.005em; color: var(--blue-strong); }
+.article h3 { font-size: 1.08rem; margin-top: 0.75rem; line-height: 1.25; }
+.article .more { margin-top: auto; padding-top: 1rem; font-weight: 700; color: var(--blue-strong); font-size: 0.92rem; display: inline-flex; align-items: center; gap: 0.4rem; }
+.article:hover .more svg { transform: translateX(3px); }
+.article .more svg { width: 14px; height: 14px; transition: transform 0.2s var(--ease); }
+@media (max-width: 860px) { .articles-grid { grid-template-columns: 1fr; } }
+
+/* ============================== Contact / formulier ============================== */
+.contact { background: var(--blue-deep); color: var(--on-blue); }
+.contact-grid { display: grid; grid-template-columns: 0.92fr 1.08fr; gap: clamp(2rem, 5vw, 4rem); align-items: start; }
+.contact-lead h2 { color: var(--on-blue); font-size: clamp(1.9rem, 1.5rem + 1.8vw, 2.8rem); letter-spacing: -0.035em; }
+.contact-lead p.intro { color: oklch(0.86 0.03 250); margin-top: 0.9rem; font-size: 1.06rem; max-width: 42ch; }
+.contact-info { margin-top: 1.9rem; display: flex; flex-direction: column; gap: 0.2rem; }
+.ci-row { display: flex; align-items: center; gap: 0.85rem; padding: 0.85rem 0; border-top: 1px solid oklch(1 0 0 / 0.13); }
+.ci-row:first-child { border-top: none; }
+.ci-ic { width: 38px; height: 38px; flex: none; border-radius: 10px; background: oklch(1 0 0 / 0.1); display: grid; place-items: center; color: oklch(0.82 0.10 245); }
+.ci-ic svg { width: 19px; height: 19px; }
+.ci-row .lbl { font-size: 0.78rem; color: oklch(0.80 0.03 250); font-weight: 600; }
+.ci-row .val { font-weight: 700; font-size: 1.02rem; color: var(--on-blue); overflow-wrap: anywhere; word-break: break-word; }
+.ci-row a.val:hover { text-decoration: underline; }
+.ci-row > span:last-child { min-width: 0; flex: 1; }          /* lange e-mail/adres breekt af i.p.v. uit beeld te lopen */
+.contact-spoed {
+  margin-top: 1.5rem; background: oklch(1 0 0 / 0.08); border: 1px solid oklch(1 0 0 / 0.16);
+  border-radius: var(--radius); padding: 1rem 1.15rem;
+  display: flex; align-items: center; gap: 0.8rem;
+}
+.contact-spoed svg { width: 26px; height: 26px; color: var(--amber); flex: none; }
+.contact-spoed p { font-size: 0.92rem; color: oklch(0.88 0.02 250); line-height: 1.4; }
+.contact-spoed strong { color: var(--on-blue); }
+
+/* form card */
+.form-card { background: var(--bg); color: var(--ink); border-radius: var(--radius-lg); padding: clamp(1.4rem, 3vw, 2.1rem); box-shadow: var(--shadow-lg); }
+.form-card > h3 { font-size: 1.35rem; letter-spacing: -0.03em; }
+.form-card > p.sub { color: var(--ink-soft); margin-top: 0.35rem; font-size: 0.96rem; }
+.field { margin-top: 1.05rem; }
+.field label { display: block; font-weight: 700; font-size: 0.9rem; margin-bottom: 0.4rem; }
+.field label .req { color: var(--err); }
+.field .hint { font-weight: 500; color: var(--ink-faint); font-size: 0.82rem; }
+.field input, .field select, .field textarea {
+  width: 100%; font-family: inherit; font-size: 1rem; color: var(--ink);
+  background: var(--surface); border: 1.5px solid var(--line);
+  border-radius: 10px; padding: 0.78rem 0.9rem; transition: border-color 0.16s var(--ease), box-shadow 0.16s var(--ease), background 0.16s var(--ease);
+}
+.field textarea { resize: vertical; min-height: 92px; }
+.field input::placeholder, .field textarea::placeholder { color: var(--ink-faint); }
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: none; border-color: var(--blue); background: var(--bg);
+  box-shadow: 0 0 0 3px oklch(0.55 0.16 250 / 0.16);
+}
+.field.invalid input, .field.invalid select, .field.invalid textarea { border-color: var(--err); }
+.field.invalid input:focus, .field.invalid select:focus, .field.invalid textarea:focus { box-shadow: 0 0 0 3px oklch(0.55 0.18 25 / 0.18); }
+.field .error { display: none; color: var(--err); font-size: 0.83rem; font-weight: 600; margin-top: 0.35rem; }
+.field.invalid .error { display: block; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
+@media (max-width: 520px) { .form-row { grid-template-columns: 1fr; } }
+.form-submit { width: 100%; margin-top: 1.3rem; }
+.form-foot { margin-top: 0.9rem; font-size: 0.82rem; color: var(--ink-faint); text-align: center; line-height: 1.45; }
+.form-foot svg { width: 13px; height: 13px; vertical-align: -2px; color: var(--ok); }
+
+.form-success {
+  display: none; text-align: center; padding: 1rem 0.5rem 0.5rem;
+}
+.form-success.show { display: block; animation: pop 0.5s var(--ease) both; }
+@keyframes pop { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .form-success.show { animation: none; } }
+.fs-check { width: 60px; height: 60px; margin: 0 auto 1rem; border-radius: 50%; background: oklch(0.62 0.13 155 / 0.14); display: grid; place-items: center; color: var(--ok); }
+.fs-check svg { width: 32px; height: 32px; }
+.form-success h3 { font-size: 1.3rem; }
+.form-success p { color: var(--ink-soft); margin-top: 0.6rem; }
+.form-success .again { margin-top: 1.1rem; background: none; border: none; color: var(--blue-strong); font-weight: 700; text-decoration: underline; }
+
+/* Harv Agency CTA (own branding, visually separate from the roofer) */
+.harv-cta {
+  margin-top: 1.5rem; text-align: left;
+  background: #4928FD; color: #fff;
+  border-radius: 14px; padding: 1.1rem 1.2rem;
+}
+.harv-cta .harv-kicker {
+  display: block; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.02em;
+  color: #fff; opacity: 0.85; margin: 0;
+}
+.harv-cta h4 { color: #fff; font-size: 1.15rem; letter-spacing: -0.02em; margin-top: 0.5rem; }
+.harv-cta p { color: #fff; opacity: 0.9; font-size: 0.92rem; margin-top: 0.3rem; line-height: 1.45; }
+.harv-cta .harv-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+  margin-top: 1rem; padding: 0.7rem 1.1rem;
+  background: #fff; color: #4928FD; font-weight: 700; font-size: 0.96rem;
+  border-radius: 10px; line-height: 1.1;
+  transition: transform 0.16s var(--ease), box-shadow 0.2s var(--ease);
+}
+.harv-cta .harv-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px oklch(0.30 0.18 285 / 0.4); }
+@media (prefers-reduced-motion: reduce) { .harv-cta .harv-btn:hover { transform: none; } }
+
+@media (max-width: 860px) { .contact-grid { grid-template-columns: 1fr; } }
+
+/* ============================== Footer ============================== */
+.footer { background: oklch(0.20 0.025 257); color: oklch(0.80 0.02 250); padding-block: clamp(2.8rem, 5vw, 4rem) 1.6rem; }
+.footer-top { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.2fr; gap: 2rem; }
+.footer-brand .brand { color: oklch(0.97 0.01 250); }
+.footer-brand .brand small { color: oklch(0.70 0.02 250); }
+.footer-brand p { margin-top: 1rem; font-size: 0.93rem; line-height: 1.55; max-width: 34ch; color: oklch(0.76 0.02 250); }
+.footer h4 { color: oklch(0.95 0.01 250); font-size: 0.92rem; letter-spacing: 0.01em; margin-bottom: 0.9rem; font-weight: 700; }
+.footer ul { display: flex; flex-direction: column; gap: 0.55rem; }
+.footer ul a, .footer address a { color: oklch(0.78 0.02 250); font-size: 0.93rem; font-style: normal; }
+.footer ul a:hover, .footer address a:hover { color: oklch(0.97 0.01 250); }
+.footer address { font-style: normal; display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.93rem; line-height: 1.5; }
+.footer address .hours { margin-top: 0.5rem; color: oklch(0.70 0.02 250); }
+.footer-bot { margin-top: 2.4rem; padding-top: 1.4rem; border-top: 1px solid oklch(1 0 0 / 0.1); display: flex; flex-wrap: wrap; gap: 0.6rem 1.2rem; justify-content: space-between; font-size: 0.84rem; color: oklch(0.66 0.02 250); }
+.footer-bot a:hover { color: oklch(0.92 0.01 250); }
+@media (max-width: 820px) { .footer-top { grid-template-columns: 1fr 1fr; gap: 1.8rem; } }
+@media (max-width: 440px) { .footer-top { grid-template-columns: 1fr; } }
+
+/* ============================== Sticky mobile CTA bar ============================== */
+.mobile-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-mobilebar);
+  display: none; gap: 0.6rem; padding: 0.6rem var(--gut) calc(0.6rem + env(safe-area-inset-bottom));
+  background: oklch(0.995 0.003 250 / 0.92); backdrop-filter: blur(10px);
+  border-top: 1px solid var(--line); box-shadow: 0 -4px 20px oklch(0.35 0.06 255 / 0.08);
+  transform: translateY(120%); transition: transform 0.35s var(--ease);
+}
+.mobile-bar.show { transform: translateY(0); }
+.mobile-bar .btn { flex: 1; }
+/* Bel-knop houdt zich compact; offerte-knop krijgt het gewicht (zoals template 1). */
+.mobile-bar .mb-call { flex: 0 0 auto; min-width: 116px; }
+.mobile-bar .mb-call svg { width: 0.95em; height: 0.95em; }
+.mobile-bar .mb-quote { flex: 1; }
+
+/* Subtiele attentie-bounce: pas na een tijdje, ease-out, geen elastische easing. */
+.mobile-bar.nudge .mb-quote { animation: mbNudge 0.85s var(--ease) 1; }
+@keyframes mbNudge {
+  0%   { transform: translateY(0); }
+  30%  { transform: translateY(-7px); }
+  55%  { transform: translateY(0); }
+  72%  { transform: translateY(-3px); }
+  100% { transform: translateY(0); }
+}
+
+@media (max-width: 760px) { .mobile-bar { display: flex; } body { padding-bottom: 76px; } }
+@media (prefers-reduced-motion: reduce) {
+  .mobile-bar { transition: none; }
+  .mobile-bar.nudge .mb-quote { animation: none; }
+}
+
+/* ============================== Reveal ============================== */
+.reveal { opacity: 1; }
+.js .reveal { opacity: 0; transform: translateY(22px); transition: opacity 0.7s var(--ease), transform 0.7s var(--ease); }
+.js .reveal.in { opacity: 1; transform: none; }
+.js .reveal-stagger > * { opacity: 0; transform: translateY(18px); transition: opacity 0.6s var(--ease), transform 0.6s var(--ease); }
+.js .reveal-stagger.in > * { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .js .reveal, .js .reveal-stagger > * { opacity: 1 !important; transform: none !important; transition: none !important; }
+}
+
+/* ============================== Multi-step Quote Widget (themed to Helder) ============================== */
+.qw {
+  /* Themed local tokens mapped onto Helder's palette */
+  --c-accent:        var(--blue);
+  --c-accent-strong: var(--blue-strong);
+  --c-accent-soft:   var(--blue-tint);
+  --c-ink:           var(--ink);
+  --c-ink-soft:      var(--ink-soft);
+  --c-ink-mute:      var(--ink-faint);
+  --c-line:          var(--line);
+  --c-surface-tint:  var(--surface-2);
+  --c-hover:         var(--blue-tint-2);
+  --r-lg: var(--radius-lg);
+  --r-md: var(--radius);
+  align-self: start; width: 100%; max-width: 100%; min-width: 0;
+}
+.qw-tagline {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin: 0 0 -8px 18px;
+  padding: 7px 16px 8px;
+  background: var(--amber); color: var(--on-amber);
+  border-radius: 999px 999px 999px 0;
+  font-size: 12.5px; font-weight: 700;
+  box-shadow: var(--shadow-amber), 0 0 0 4px oklch(1 0 0 / 0.5);
+  position: relative; z-index: 2;
+}
+.qw-tagline-dot {
+  width: 8px; height: 8px; border-radius: 999px;
+  background: var(--on-amber);
+  box-shadow: 0 0 0 4px oklch(0.28 0.08 60 / 0.35);
+  animation: qwPulse 1.8s ease-in-out infinite;
+}
+@keyframes qwPulse { 50% { box-shadow: 0 0 0 8px oklch(0.28 0.08 60 / 0); } }
+.qw-card {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 28px 24px 24px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.qw-progress {
+  height: 3px; background: var(--c-line);
+  border-radius: 999px; margin: -6px -8px 18px; overflow: hidden;
+}
+.qw-progress-bar {
+  height: 100%; background: var(--c-accent);
+  border-radius: 999px; transition: width .4s var(--ease);
+}
+.qw-head { margin-bottom: 18px; }
+.qw-head h3 {
+  font-family: inherit; font-weight: 800; font-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem);
+  line-height: 1.15; letter-spacing: -0.03em; margin: 0 0 4px; color: var(--c-ink);
+}
+.qw-head p { margin: 0; font-size: 0.92rem; color: var(--c-ink-soft); }
+.qw-body { animation: qwFade .35s var(--ease); }
+@keyframes qwFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.qw-form { display: grid; gap: 12px; }
+.qw-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.qw-input {
+  width: 100%; min-width: 0; padding: 11px 0 9px;
+  border: 0; border-bottom: 1.5px solid var(--c-line);
+  background: transparent; font-family: inherit; font-size: 0.95rem;
+  color: var(--c-ink); outline: none; transition: border-color .15s var(--ease);
+}
+.qw-input:focus { border-color: var(--c-accent); }
+.qw-input::placeholder { color: var(--c-ink-mute); }
+.qw-fieldset { margin-top: 6px; }
+.qw-label { display: block; font-size: 0.8rem; font-weight: 700; color: var(--c-ink-soft); margin-bottom: 8px; }
+.qw-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.qw-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px 6px 8px; border-radius: 999px;
+  background: var(--c-surface-tint); color: var(--c-ink-soft);
+  font-size: 0.8rem; font-weight: 600; border: 1px solid transparent;
+  transition: background .15s var(--ease), color .15s var(--ease), border-color .15s var(--ease);
+}
+.qw-chip:hover { background: var(--c-hover); }
+.qw-chip.is-on { background: var(--c-accent); color: var(--on-blue); }
+.qw-chip-ic { width: 18px; height: 18px; display: grid; place-items: center; }
+.qw-chip-ic svg { width: 14px; height: 14px; }
+.qw-grid { display: grid; gap: 10px; }
+.qw-tile {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  padding: 16px 14px; background: var(--c-surface-tint);
+  border-radius: var(--r-md); border: 1.5px solid transparent;
+  color: var(--c-ink); text-align: left;
+  transition: background .15s var(--ease), border-color .15s var(--ease);
+}
+.qw-tile:hover { background: var(--c-hover); }
+.qw-tile.is-on { background: var(--c-accent-soft); border-color: var(--c-accent); }
+.qw-tile-ic {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--bg); color: var(--c-accent-strong);
+  display: grid; place-items: center; box-shadow: 0 0 0 1px var(--c-line);
+}
+.qw-tile-ic svg { width: 18px; height: 18px; }
+.qw-tile-label { font-weight: 700; font-size: 0.9rem; }
+.qw-tile-sub { font-size: 0.78rem; color: var(--c-ink-soft); }
+.qw-tile-check {
+  position: absolute; top: 12px; right: 12px; width: 22px; height: 22px;
+  border-radius: 999px; background: var(--c-accent); color: var(--on-blue);
+  display: grid; place-items: center; opacity: 0; transform: scale(.6);
+  transition: opacity .2s var(--ease), transform .2s var(--ease);
+}
+.qw-tile-check svg { width: 13px; height: 13px; }
+.qw-tile.is-on .qw-tile-check { opacity: 1; transform: scale(1); }
+.qw-list { display: grid; gap: 8px; }
+.qw-list-item {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px;
+  padding: 14px 16px; background: var(--c-surface-tint);
+  border-radius: var(--r-md); border: 1.5px solid transparent; text-align: left;
+  transition: background .15s var(--ease), border-color .15s var(--ease);
+}
+.qw-list-item:hover { background: var(--c-hover); }
+.qw-list-item.is-on { background: var(--c-accent-soft); border-color: var(--c-accent); }
+.qw-list-ic {
+  width: 36px; height: 36px; border-radius: 10px; background: var(--bg);
+  color: var(--c-accent-strong); display: grid; place-items: center; box-shadow: 0 0 0 1px var(--c-line);
+}
+.qw-list-ic svg { width: 18px; height: 18px; }
+.qw-list-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.qw-list-label { font-weight: 700; font-size: 0.92rem; color: var(--c-ink); }
+.qw-list-sub { font-size: 0.8rem; color: var(--c-ink-soft); }
+.qw-list-radio {
+  width: 20px; height: 20px; border-radius: 999px; border: 1.5px solid var(--c-line);
+  display: grid; place-items: center; transition: border-color .15s var(--ease);
+}
+.qw-list-radio-dot {
+  width: 10px; height: 10px; border-radius: 999px; background: var(--c-accent);
+  opacity: 0; transform: scale(.5); transition: opacity .2s var(--ease), transform .2s var(--ease);
+}
+.qw-list-item.is-on .qw-list-radio { border-color: var(--c-accent); }
+.qw-list-item.is-on .qw-list-radio-dot { opacity: 1; transform: scale(1); }
+.qw-photo { display: grid; gap: 12px; }
+.qw-drop {
+  width: 100%; min-height: 150px; padding: 24px;
+  border: 2px dashed var(--c-line); border-radius: var(--r-md);
+  background: var(--c-surface-tint); display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px;
+  color: var(--c-ink-soft); font-size: 0.82rem; text-align: center;
+  transition: border-color .15s var(--ease), background .15s var(--ease);
+}
+.qw-drop:hover { border-color: var(--c-accent); background: var(--bg); }
+.qw-drop strong { color: var(--c-ink); font-size: 0.9rem; }
+.qw-drop-ic {
+  width: 40px; height: 40px; border-radius: 999px; background: var(--c-accent-soft);
+  color: var(--c-accent-strong); display: grid; place-items: center; margin-bottom: 4px;
+}
+.qw-drop-ic svg { width: 20px; height: 20px; }
+.qw-photo-preview { max-width: 100%; max-height: 200px; border-radius: 10px; object-fit: cover; }
+.qw-photo-name { font-size: 0.8rem; color: var(--c-ink); font-weight: 600; }
+.qw-photo-replace { font-size: 0.78rem; color: var(--c-accent-strong); }
+.qw-skip {
+  align-self: center; display: inline-flex; align-items: center; gap: 6px;
+  background: transparent; border: 0; color: var(--c-ink-soft); font-size: 0.82rem; padding: 4px 10px;
+}
+.qw-skip:hover { color: var(--c-ink); }
+.qw-skip-ic { width: 14px; height: 14px; display: grid; place-items: center; }
+.qw-skip-ic svg { width: 14px; height: 14px; }
+.qw-done { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 16px 8px 8px; }
+.qw-done-ic {
+  width: 64px; height: 64px; border-radius: 999px; background: var(--ok); color: var(--on-blue);
+  display: grid; place-items: center; margin-bottom: 16px;
+  animation: qwBounce .5s cubic-bezier(.4,1.6,.6,1);
+}
+@keyframes qwBounce { 0% { transform: scale(0); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
+.qw-done-ic svg { width: 30px; height: 30px; }
+.qw-done-title { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.03em; margin: 0 0 8px; color: var(--c-ink); }
+.qw-done-body { font-size: 0.92rem; color: var(--c-ink-soft); margin: 0 0 18px; max-width: 320px; }
+.qw-summary { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.qw-summary-pill { padding: 5px 12px; background: var(--c-surface-tint); border-radius: 999px; font-size: 0.78rem; color: var(--c-ink-soft); }
+.qw-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 18px; gap: 12px; }
+.qw-back {
+  display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px;
+  background: transparent; border: 0; color: var(--c-ink-soft); font-size: 0.85rem;
+  border-radius: 10px; transition: background .15s var(--ease);
+}
+.qw-back:hover { background: var(--c-surface-tint); }
+.qw-back-ic { display: grid; place-items: center; width: 14px; height: 14px; }
+.qw-back-ic svg { width: 14px; height: 14px; }
+.qw-cta {
+  display: inline-flex; align-items: center; gap: 10px; padding: 12px 14px 12px 20px;
+  margin-right: -8px;
+  background: var(--ink); color: var(--bg); border: 0; border-radius: 999px;
+  font-weight: 700; font-size: 0.92rem;
+  transition: background .15s var(--ease), opacity .15s var(--ease), transform .15s var(--ease);
+}
+.qw-cta:hover { transform: translateY(-1px); }
+.qw-cta:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+.qw-cta-ic { width: 30px; height: 30px; border-radius: 999px; background: var(--c-accent); display: grid; place-items: center; }
+.qw-cta-ic svg { width: 14px; height: 14px; color: var(--on-blue); }
+@media (max-width: 900px) { .qw { max-width: 560px; } }
+@media (max-width: 560px) { .qw { margin-inline: auto; max-width: 440px; } .qw-tagline { margin-left: 0; } }
+@media (max-width: 380px) { .qw-row-2 { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) {
+  .qw-body, .qw-done-ic, .qw-tagline-dot { animation: none !important; }
+  .qw-cta:hover { transform: none; }
+}
+</style>
+<style>
+  /* ===== Ingebouwde device-preview (Desktop / Mobiel) + mobiele mini-header ===== */
+  .is-framed .devbar, .is-framed .devframe-overlay, .is-framed .harv-intro { display: none !important; }
+  .devbar {
+    position: fixed; top: 84px; left: 50%; transform: translateX(-50%);
+    z-index: 9000; display: inline-flex; align-items: center; gap: 2px;
+    padding: 3px; border-radius: 999px;
+    background: rgba(22,28,44,.86); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    box-shadow: 0 10px 28px rgba(10,14,25,.4);
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  }
+  .devbtn {
+    appearance: none; border: 0; background: transparent; color: #c6cde0;
+    padding: 7px 15px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    transition: color .18s ease, background .18s ease;
+  }
+  .devbtn svg { width: 14px; height: 14px; }
+  .devbtn[aria-pressed="true"] { background: #fff; color: #15171f; }
+  .devbtn:not([aria-pressed="true"]):hover { color: #fff; }
+  .devbtn:focus-visible { outline: 2px solid #ffb48c; outline-offset: 2px; }
+  .devbar-tip {
+    position: absolute; top: calc(100% + 11px); left: 50%; transform: translateX(-50%);
+    white-space: nowrap; background: color-mix(in oklch, var(--amber) 78%, transparent); color: var(--on-amber);
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    padding: 8px 14px; border-radius: 10px; font-size: 12.5px; font-weight: 700;
+    box-shadow: 0 12px 30px rgba(0,0,0,.25); pointer-events: none;
+  }
+  .devbar-tip[hidden] { display: none; }
+  .devbar-tip::before {
+    content: ""; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+    border: 6px solid transparent; border-bottom-color: color-mix(in oklch, var(--amber) 78%, transparent);
+  }
+  .devbar.nudge { animation: devShake 2.6s ease-in-out 2; }
+  @keyframes devShake {
+    0%, 86%, 100% { transform: translateX(-50%); }
+    89% { transform: translateX(calc(-50% - 4px)); }
+    92% { transform: translateX(calc(-50% + 4px)); }
+    95% { transform: translateX(calc(-50% - 2px)); }
+  }
+  .devframe-overlay {
+    position: fixed; inset: 0; z-index: 8990;
+    background: rgba(8,11,20,.62); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+    display: grid; grid-template-rows: 1fr auto; place-items: center; gap: 14px;
+    padding: 124px 16px 24px;
+  }
+  .devframe-overlay[hidden] { display: none; }
+  .devframe {
+    position: relative;
+    /* Altijd telefoon-verhouding (iPhone ~390×844), schaalt mee met de beschikbare
+       hoogte — onafhankelijk van browser-zoom, dus nooit "iPad-achtig" breed. */
+    height: min(844px, calc(100vh - 140px));
+    aspect-ratio: 390 / 844; width: auto; max-width: calc(100vw - 32px);
+    border: 10px solid #1b212c; border-radius: 46px; overflow: hidden;
+    background: #fff; box-shadow: 0 40px 90px -30px rgba(0,0,0,.7), inset 0 0 0 1px #05070b;
+  }
+  .devframe-notch {
+    position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 38%; height: 22px; background: #1b212c; border-radius: 0 0 14px 14px; z-index: 2;
+  }
+  .devframe iframe { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
+  .devframe-close {
+    appearance: none; border: 0; cursor: pointer;
+    background: rgba(255,255,255,.94); color: #15171f; font-weight: 600; font-size: 13px;
+    padding: 9px 18px; border-radius: 999px; box-shadow: 0 10px 28px rgba(0,0,0,.35);
+  }
+  .devframe-close:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  body.dev-locked { overflow: hidden; }
+  /* Helders eigen .harv-badge is verwijderd: "Presented by Harv" komt nu alleen
+     uit de generator-bubbel ({{HARV_PRESENTED_BY}}, rechtsonder). */
+  @media (max-width: 760px) {
+    .devbar, .devframe-overlay { display: none !important; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .devbar.nudge { animation: none; }
+  }
+
+  /* Op mobiel blijft de gewone header gewoon sticky bovenaan staan: altijd
+     zichtbaar en stil, geen apart in-schuivend balkje. De aparte mini-header
+     wordt daarom niet gebruikt. */
+  .mobile-mini-header { display: none !important; }
+  @media (max-width: 760px) {
+    /* In de preview zit een notch boven in het telefoonframe; geef de header
+       net genoeg ruimte zodat de letters niet onder de notch vallen, maar
+       houd 'm compact. */
+    .is-framed .header { padding-top: 8px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mobile-mini-header { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<!--
+  TODO TPL-B (generator-fit notes): helder is data-fillable via the #template-data JSON,
+  the [data-tpl] bindings and the brand bridge (--c-accent/--c-dark → --blue role) above.
+  A few of the generator's heavier _bake_dakdekker_dom selectors are template-A-specific and
+  intentionally NOT mirrored here, because helder has its own (different) DOM for them:
+    • section-hide hooks (body.hide-team/projects/reviews/blog, .qw-empty, *-fewer) – helder
+      uses its own section structure; per-card hide for B would need its own pass.
+    • .services-list .service-row / #why .why-item / #projects .projects-list / #reviews .tm-card
+      / .team-grid .member-body / .trust-marks / .logo-text|.logo-img / .page mobile-bar –
+      these A-only selectors simply no-op on helder (helder keeps its own equivalents intact).
+    • Stats count-up reads each .count's data-to attribute, not STAT_n_VALUE; data-tpl sets the
+      text but the count-up re-animates to data-to. The generator should patch data-to too if it
+      wants animated stats to match the lead's numbers.
+  The grid-degradation hooks the generator DOES target are present: .process-grid, .stats +
+  .stat[data-stat], .tm-grid, .why-left, .why-right.
+-->
+<!-- ===== Ingebouwde device-preview toggle (alleen desktop; verborgen binnen het preview-iframe) ===== -->
+<div class="devbar" id="devbar" role="group" aria-label="Bekijk deze pagina op desktop of mobiel">
+  <button type="button" class="devbtn" data-mode="desktop" aria-pressed="true">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="4" width="19" height="13" rx="2" stroke="currentColor" stroke-width="2"/><path d="M9 21h6M12 17v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    Desktop
+  </button>
+  <button type="button" class="devbtn" data-mode="mobile" aria-pressed="false">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5" stroke="currentColor" stroke-width="2"/><path d="M11 18.5h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    Mobiel
+  </button>
+  <span class="devbar-tip" id="devbarTip" hidden>Bekijk ook de mobiele versie</span>
+</div>
+<div class="devframe-overlay" id="devOverlay" hidden>
+  <div class="devframe">
+    <span class="devframe-notch" aria-hidden="true"></span>
+    <iframe id="devIframe" title="Mobiele weergave van deze pagina"></iframe>
+  </div>
+  <button type="button" class="devframe-close" id="devClose">Terug naar desktop</button>
+</div>
+<!-- "Presented by Harv" = ALLEEN de per-lead bubbel die de generator injecteert
+     via {{HARV_PRESENTED_BY}} (rechtsonder, alle viewports). Helders eigen
+     .harv-badge is verwijderd om dubbele/mobiele Harv-knoppen te voorkomen. -->
+<script>
+(function () {
+  if (window.self !== window.top) return;        /* nooit tonen binnen het preview-iframe */
+  var bar = document.getElementById('devbar');
+  var overlay = document.getElementById('devOverlay');
+  var iframe = document.getElementById('devIframe');
+  var tip = document.getElementById('devbarTip');
+  var btns = bar.querySelectorAll('.devbtn');
+  var closeBtn = document.getElementById('devClose');
+  var used = false;
+  function hideTip() { tip.hidden = true; bar.classList.remove('nudge'); }
+  function setMode(mobile) {
+    used = true; hideTip();
+    if (mobile && !iframe.src) iframe.src = location.pathname;
+    overlay.hidden = !mobile;
+    document.body.classList.toggle('dev-locked', mobile);
+    btns.forEach(function (b) { b.setAttribute('aria-pressed', String((b.dataset.mode === 'mobile') === mobile)); });
+  }
+  btns.forEach(function (b) { b.addEventListener('click', function () { setMode(b.dataset.mode === 'mobile'); }); });
+  closeBtn.addEventListener('click', function () { setMode(false); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !overlay.hidden) setMode(false); });
+  /* Nudge "Bekijk ook de mobiele versie": verschijnt tijdens het scrollen zodra
+     je de eerste content-secties bereikt (net als bij de andere versie), met een
+     30s-fallback en een fallback onderaan de pagina. De tip blijft staan tot je
+     de toggle gebruikt; de shake speelt eenmalig om de aandacht te trekken. */
+  function nudge() {
+    if (used) return;
+    tip.hidden = false;
+    bar.classList.remove('nudge');
+    void bar.offsetWidth;            /* herstart de shake-animatie indien nodig */
+    bar.classList.add('nudge');
+  }
+  /* Na 15s zonder gebruik, óf zodra je de sectie "Wat wij voor uw dak doen"
+     echt boven in beeld hebt gescrold — eerder kwam de melding te vroeg. */
+  setTimeout(nudge, 15000);
+  /* De sectie staat verderop in de DOM dan dit script, dus wacht tot de
+     pagina klaar is voordat we 'm volgen. */
+  function watchSection() {
+    var anchor = document.getElementById('diensten');
+    if (!anchor) return;
+    function check() {
+      if (used) return;
+      /* Pas wanneer de sectie tot in de bovenste 20% van het scherm is
+         gescrold (je bent er dan echt bij), niet zodra hij net even piept. */
+      if (anchor.getBoundingClientRect().top <= window.innerHeight * 0.2) {
+        nudge();
+        window.removeEventListener('scroll', check);
+      }
+    }
+    window.addEventListener('scroll', check, { passive: true });
+    check();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watchSection);
+  else watchSection();
+})();
+</script>
+<!-- ══════════════════════════════════════════════════════════════════
+     HARV INTRO — FINAL "grand opening": de schaar knipt het lint, daarna
+     splitst het scherm langs de snede open (boven omhoog, onder omlaag) en
+     onthult de pagina. Gethemed naar Helders kobalt-palet via 3 CSS-variabelen
+     op .harv-intro (--ix-bg / --ix-ribbon / --ix-ink); schaar = currentColor.
+     ══════════════════════════════════════════════════════════════════ -->
+<div class="harv-intro is-playing" id="harvIntro" role="status" aria-label="Intro"
+     style="--ix-bg:#0c1a30; --ix-ribbon:#1f7fde; --ix-ink:#f5f8ff;">
+  <button class="hix-skip" type="button" id="harvIntroSkip">Overslaan</button>
+  <div class="ov-top"></div>
+  <div class="ov-bot"></div>
+  <div class="hix-content">
+    <p class="hix-eyebrow">Speciaal gemaakt voor</p>
+    <p class="hix-name" data-tpl="COMPANY_NAME">Van den Berg Dakwerken</p>
+    <div class="hix-stage" aria-hidden="true">
+      <span class="hix-ribbon hix-ribbon-l"></span>
+      <span class="hix-ribbon hix-ribbon-r"></span>
+      <svg class="hix-scissors" viewBox="0 0 170 96">
+        <g class="hix-blade hix-top">
+          <path class="s-neck" stroke-width="7.5" d="M92 48 L141 72"/>
+          <ellipse class="s-loop" stroke-width="6.5" cx="150" cy="77" rx="11" ry="14"/>
+          <path class="s-blade" d="M92 46 C66 32 34 27 10 29 C40 37 68 47 92 50 Z"/>
+        </g>
+        <g class="hix-blade hix-bot">
+          <path class="s-neck" stroke-width="7.5" d="M92 48 L141 24"/>
+          <ellipse class="s-loop" stroke-width="6.5" cx="150" cy="19" rx="11" ry="14"/>
+          <path class="s-blade" d="M92 50 C66 64 34 69 10 67 C40 59 68 49 92 46 Z"/>
+        </g>
+        <circle class="hix-pivot" cx="92" cy="48" r="5.2"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<style>
+  .harv-intro {
+    --ix-bg: #161d2b;
+    --ix-ribbon: #f06a2a;
+    --ix-ink: #f7f8fb;
+    position: fixed; inset: 0; z-index: 10000;
+  }
+  .harv-intro.is-done { display: none !important; }
+
+  /* two shutters form the dark backdrop and split apart on the cut */
+  .ov-top, .ov-bot { position: absolute; left: 0; right: 0; height: 50%; background: var(--ix-bg); z-index: 1; }
+  .ov-top { top: 0; } .ov-bot { bottom: 0; }
+
+  .hix-content {
+    position: absolute; inset: 0; z-index: 2; color: var(--ix-ink);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 22px; text-align: center; padding: 24px;
+  }
+
+  .hix-skip {
+    position: absolute; top: 20px; right: 20px; z-index: 3;
+    background: rgba(255,255,255,.08); color: var(--ix-ink);
+    border: 1px solid rgba(255,255,255,.16); border-radius: 999px;
+    padding: 8px 16px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .2s ease;
+  }
+  .hix-skip:hover { background: rgba(255,255,255,.16); }
+  .hix-skip:focus-visible { outline: 2px solid var(--ix-ribbon); outline-offset: 2px; }
+
+  .hix-eyebrow { margin: 0; font-size: clamp(.85rem, .8rem + .3vw, 1rem); letter-spacing: .01em; color: color-mix(in oklab, var(--ix-ink) 72%, transparent); font-weight: 500; }
+  .hix-name { margin: 0; font-size: clamp(1.9rem, 1.2rem + 3.4vw, 3.6rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; max-width: 16ch; text-wrap: balance; }
+
+  .hix-stage { position: relative; width: min(520px, 86vw); height: 96px; margin-top: 6px; }
+  .hix-ribbon {
+    position: absolute; top: 50%; height: 24px; width: calc(50% + 1px);
+    background: var(--ix-ribbon); transform: translateY(-50%);
+    box-shadow: 0 8px 24px -8px color-mix(in oklab, var(--ix-ribbon) 60%, transparent);
+  }
+  .hix-ribbon-l { left: 0;  border-radius: 6px 0 0 6px; }
+  .hix-ribbon-r { right: 0; border-radius: 0 6px 6px 0; }
+
+  /* the chosen scissors (slim, curved blades, oval loops) */
+  .hix-scissors { position: absolute; top: 50%; left: 50%; width: 152px; height: 86px; transform: translate(-34%, -50%); color: var(--ix-ink); overflow: visible; }
+  .hix-scissors .s-blade { fill: currentColor; stroke: none; }
+  .hix-scissors .s-neck  { fill: none; stroke: currentColor; stroke-linecap: round; }
+  .hix-scissors .s-loop  { fill: none; stroke: currentColor; }
+  .hix-pivot { fill: currentColor; }
+  .hix-blade { transform-box: view-box; transform-origin: 92px 48px; }
+
+  /* ── Timeline (≈3.4s to the open) ── */
+  .harv-intro.is-playing .hix-eyebrow { animation: hixRise .6s cubic-bezier(.16,1,.3,1) both; }
+  .harv-intro.is-playing .hix-name    { animation: hixRise .7s cubic-bezier(.16,1,.3,1) .08s both; }
+  .harv-intro.is-playing .hix-stage   { animation: hixStage .6s cubic-bezier(.16,1,.3,1) .5s both; }
+  .harv-intro.is-playing .hix-top     { animation: hixTop 1.5s cubic-bezier(.22,1,.36,1) .55s both; }
+  .harv-intro.is-playing .hix-bot     { animation: hixBot 1.5s cubic-bezier(.22,1,.36,1) .55s both; }
+  .harv-intro.is-playing .hix-ribbon-l{ animation: hixFallL .85s cubic-bezier(.4,0,.55,1) 1.65s both; }
+  .harv-intro.is-playing .hix-ribbon-r{ animation: hixFallR .85s cubic-bezier(.4,0,.55,1) 1.65s both; }
+  /* the cut opens the screen */
+  .harv-intro.is-playing .ov-top     { animation: ovUp   .9s cubic-bezier(.6,0,.25,1) 2.4s both; }
+  .harv-intro.is-playing .ov-bot     { animation: ovDown .9s cubic-bezier(.6,0,.25,1) 2.4s both; }
+  .harv-intro.is-playing .hix-content{ animation: ovContent .5s ease 2.45s both; }
+
+  @keyframes hixRise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes hixStage { from { opacity: 0; transform: scaleX(.6); } to { opacity: 1; transform: none; } }
+  @keyframes hixTop { 0%,23% { transform: rotate(9deg); } 50% { transform: rotate(-12deg); } 73% { transform: rotate(10deg); } 80% { transform: rotate(7.5deg); } 100% { transform: rotate(8deg); } }
+  @keyframes hixBot { 0%,23% { transform: rotate(-9deg); } 50% { transform: rotate(12deg); } 73% { transform: rotate(-10deg); } 80% { transform: rotate(-7.5deg); } 100% { transform: rotate(-8deg); } }
+  @keyframes hixFallL { from { transform: translateY(-50%) translateX(0) rotate(0); opacity: 1; } to { transform: translateY(72px) translateX(-18px) rotate(-16deg); opacity: 0; } }
+  @keyframes hixFallR { from { transform: translateY(-50%) translateX(0) rotate(0); opacity: 1; } to { transform: translateY(88px) translateX(18px) rotate(16deg); opacity: 0; } }
+  @keyframes ovUp   { to { transform: translateY(-101%); } }
+  @keyframes ovDown { to { transform: translateY(101%); } }
+  @keyframes ovContent { to { opacity: 0; } }
+
+  /* skip = quick fade of the whole overlay */
+  .harv-intro.is-fading { animation: hixOut .45s ease forwards; }
+  @keyframes hixOut { to { opacity: 0; visibility: hidden; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .harv-intro.is-playing * { animation: none !important; }
+    .hix-top { transform: rotate(8deg); } .hix-bot { transform: rotate(-8deg); }
+  }
+</style>
+<script>
+  (function () {
+    var intro = document.getElementById('harvIntro');
+    if (!intro) return;
+    var skip = document.getElementById('harvIntroSkip');
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function dismiss() { intro.classList.add('is-fading'); setTimeout(function () { intro.classList.add('is-done'); }, 460); }
+    if (skip) skip.addEventListener('click', dismiss);
+    // Reduced motion: stille fade. Anders: het scherm splitst open en is ~3.4s
+    // later volledig weg → overlay verwijderen.
+    if (reduce) { setTimeout(dismiss, 1100); }
+    else { setTimeout(function () { intro.classList.add('is-done'); }, 3500); }
+    // Hard safety net: never let the overlay trap the page.
+    setTimeout(function () { intro.classList.add('is-done'); }, 6500);
+  })();
+</script>
+<!-- ════════════════ EINDE HARV INTRO ════════════════ -->
+
+<a class="skip" href="#offerte">Direct naar offerteformulier</a>
+
+<!-- ============================== Header ============================== -->
+<header class="header" id="header">
+  <div class="wrap header-inner">
+    <a class="brand" href="#header" aria-label="Naar boven">
+      <span class="brand-mark" aria-hidden="true">
+        <img class="brand-logo-img" alt="" data-tpl-attr="LOGO_URL:src" onerror="this.removeAttribute('src')" />
+        <svg viewBox="0 0 24 24" fill="none"><path d="M2 11 12 4l10 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v9h14v-9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <span class="brand-txt"><span data-tpl="COMPANY_NAME">Van den Berg Dakwerken</span><small>Erkend dakdekker · <span data-tpl="CITY">Utrecht</span></small></span>
+    </a>
+
+    <nav class="nav" aria-label="Hoofdmenu">
+      <a class="navlink" href="#diensten" data-tpl="NAV_SERVICES">Diensten</a>
+      <a class="navlink" href="#werkwijze" data-tpl="NAV_PROCESS">Werkwijze</a>
+      <a class="navlink" href="#waarom" data-tpl="NAV_WHY">Waarom wij</a>
+      <a class="navlink" href="#projecten" data-tpl="NAV_PROJECTS">Projecten</a>
+      <a class="navlink" href="#kennis" data-tpl="NAV_KNOWLEDGE">Kennis</a>
+      <span class="header-cta">
+        <a class="header-phone" id="nav-phone" href="tel:+31301234567" aria-label="Bel ons">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 5 5L16 13l5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          <span data-tpl="FOOT_PHONE">030 - 123 45 67</span>
+        </a>
+        <a class="btn btn-amber header-quote" href="#offerte" data-tpl="CTA_QUOTE">Gratis offerte</a>
+      </span>
+    </nav>
+
+    <button class="burger" id="burger" aria-label="Menu openen" aria-expanded="false" aria-controls="mobileMenu">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- Mobile menu -->
+<div class="mobile-menu" id="mobileMenu" role="dialog" aria-modal="true" aria-label="Navigatiemenu">
+  <div class="wrap mm-top" style="padding-inline:0;">
+    <a class="brand" href="#header"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M2 11 12 4l10 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v9h14v-9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="brand-txt"><span data-tpl="COMPANY_NAME">Van den Berg Dakwerken</span><small>Erkend dakdekker · <span data-tpl="CITY">Utrecht</span></small></span></a>
+    <button class="mm-close" id="mmClose" aria-label="Menu sluiten"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+  </div>
+  <nav class="mm-links" aria-label="Mobiel menu">
+    <a href="#diensten" data-tpl="NAV_SERVICES">Diensten</a>
+    <a href="#werkwijze" data-tpl="NAV_PROCESS">Werkwijze</a>
+    <a href="#waarom" data-tpl="NAV_WHY">Waarom wij</a>
+    <a href="#projecten" data-tpl="NAV_PROJECTS">Projecten</a>
+    <a href="#kennis" data-tpl="NAV_KNOWLEDGE">Kennis</a>
+    <a href="#offerte" data-tpl="NAV_CONTACT">Contact</a>
+  </nav>
+  <div class="mm-foot">
+    <a class="btn btn-amber btn-lg" href="#offerte" data-tpl="CTA_QUOTE">Vraag gratis offerte aan</a>
+    <a class="btn btn-ghost btn-lg" href="tel:+31301234567">Bel <span data-tpl="FOOT_PHONE">030 - 123 45 67</span></a>
+  </div>
+</div>
+
+<main id="main">
+
+  <!-- ============================== Hero ============================== -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <span class="hero-badge"><span class="dot" aria-hidden="true"></span><span class="hero-badge-txt" data-tpl="HERO_BADGE"></span></span>
+        <h1>Vakwerk voor uw dak <span class="em">in <span data-tpl="CITY">Utrecht</span></span></h1>
+        <p class="hero-sub" data-tpl="HERO_SUB">Van lekkage en reparatie tot een compleet nieuw dak: vakkundig werk en een vrijblijvende offerte.</p>
+        <div class="hero-actions">
+          <a class="btn btn-amber btn-lg" href="#offerte" data-tpl="CTA_QUOTE">Vraag gratis offerte aan</a>
+          <a class="btn btn-ghost btn-lg" href="tel:+31301234567">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 5 5L16 13l5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+            Bel <span data-tpl="FOOT_PHONE">030 - 123 45 67</span>
+          </a>
+        </div>
+        <div class="trust-strip">
+          <span class="trust-item"><span class="stars" aria-hidden="true">★★★★★</span><strong class="mono" data-tpl="HERO_RATING">4,9</strong></span>
+          <span class="trust-sep" aria-hidden="true"></span>
+          <span class="trust-item"><strong class="mono" data-tpl="HERO_REVIEW_COUNT">210+</strong> beoordelingen</span>
+          <span class="trust-sep" aria-hidden="true"></span>
+          <span class="trust-item"><svg class="trust-check" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 13 4 4 10-11" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-tpl="HERO_TRUST_2">Volledig verzekerd</span></span>
+        </div>
+      </div>
+
+      <div class="hero-form-wrap">
+        <div id="quote-widget-mount"></div>
+        <!-- Trust-strip onder het formulier — alleen mobiel (op desktop staat 'ie in de hero-copy) -->
+        <div class="trust-strip trust-strip-mobile">
+          <span class="trust-item"><span class="stars" aria-hidden="true">★★★★★</span><strong class="mono" data-tpl="HERO_RATING">4,9</strong></span>
+          <span class="trust-sep" aria-hidden="true"></span>
+          <span class="trust-item"><strong class="mono" data-tpl="HERO_REVIEW_COUNT">210+</strong> beoordelingen</span>
+          <span class="trust-sep" aria-hidden="true"></span>
+          <span class="trust-item"><svg class="trust-check" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 13 4 4 10-11" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-tpl="HERO_TRUST_2">Volledig verzekerd</span></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== Reassurance band ============================== -->
+  <section class="assure" aria-label="Waarom u gerust kunt zijn">
+    <div class="wrap assure-inner reveal-stagger">
+      <div class="assure-item">
+        <span class="assure-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3 4 6v6c0 5 3.5 7.5 8 9 4.5-1.5 8-4 8-9V6l-8-3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <div><h3 data-tpl="ASSURE_1_TITLE">Vrijblijvende offerte</h3><p data-tpl="ASSURE_1_BODY">Vooraf een heldere prijs, zonder verplichtingen.</p></div>
+      </div>
+      <div class="assure-item">
+        <span class="assure-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4L4.2 7.7l5.4-.8L12 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
+        <div><h3 data-tpl="ASSURE_2_TITLE">Persoonlijk contact</h3><p data-tpl="ASSURE_2_BODY">Korte lijnen van eerste contact tot oplevering.</p></div>
+      </div>
+      <div class="assure-item">
+        <span class="assure-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <div><h3 data-tpl="ASSURE_3_TITLE">Vakkundig uitgevoerd</h3><p data-tpl="ASSURE_3_BODY">Net en zorgvuldig werk met oog voor de afwerking.</p></div>
+      </div>
+      <div class="assure-item">
+        <span class="assure-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M16 3a4 4 0 0 1 0 8M3 21v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/></svg></span>
+        <div><h3 data-tpl="ASSURE_4_TITLE">Snel een reactie</h3><p data-tpl="ASSURE_4_BODY">Bij spoed snel bereikbaar voor een afspraak.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== Diensten ============================== -->
+  <section class="section services" id="diensten">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <h2 data-tpl="SERVICES_TITLE">Wat wij voor uw dak doen</h2>
+        <p data-tpl="SERVICES_INTRO">Van een acuut lek tot een compleet nieuw dak. U weet vooraf wat u krijgt en wat het kost, uitgevoerd door onze eigen ploeg.</p>
+      </div>
+
+      <div class="svc-grid reveal-stagger">
+        <!-- Feature -->
+        <article class="svc svc-feature">
+          <div class="svc-img"><img src="../assets/service-1-install.jpg" loading="lazy" decoding="async" alt="Dakdekker legt nieuwe keramische dakpannen op een woonhuis" /></div>
+          <div class="svc-body">
+            <h3 data-tpl="SERVICE_1_NAME">Dakbedekking &amp; nieuwbouw</h3>
+            <p class="svc-desc" data-tpl="SERVICE_1_DESC">Pannen, bitumen, EPDM of zink: een nieuw dak dat decennia meegaat, vakkundig aangelegd door onze eigen ploeg.</p>
+            <div class="svc-list">
+              <span class="svc-tag">Keramische pannen</span>
+              <span class="svc-tag">Bitumen</span>
+              <span class="svc-tag">EPDM</span>
+              <span class="svc-tag">Zink &amp; lood</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Compact A -->
+        <article class="svc svc-a svc-compact">
+          <div class="svc-img"><img src="../assets/service-2-repair.jpg" loading="lazy" decoding="async" alt="Dakdekker repareert een lekkage op een dak" /></div>
+          <div class="svc-body">
+            <h3 data-tpl="SERVICE_2_NAME">Dakreparatie &amp; lekkages</h3>
+            <p class="svc-desc" data-tpl="SERVICE_2_DESC">Snel een lek opgespoord en duurzaam verholpen, vaak nog dezelfde week.</p>
+          </div>
+        </article>
+
+        <!-- Compact B -->
+        <article class="svc svc-b svc-compact">
+          <div class="svc-img"><img src="../assets/service-3-replace.jpg" loading="lazy" decoding="async" alt="Verouderd dak dat compleet wordt vervangen" /></div>
+          <div class="svc-body">
+            <h3 data-tpl="SERVICE_3_NAME">Dakrenovatie &amp; vervanging</h3>
+            <p class="svc-desc" data-tpl="SERVICE_3_DESC">Een verouderd dak compleet vernieuwd, inclusief isolatie en dakgoten.</p>
+          </div>
+        </article>
+
+        <!-- Wide -->
+        <article class="svc svc-wide">
+          <div class="svc-body">
+            <h3 data-tpl="SERVICE_4_NAME">Inspectie &amp; onderhoud</h3>
+            <p class="svc-desc" data-tpl="SERVICE_4_DESC">Periodieke controle die kleine gebreken voor blijft en uw dak jarenlang gezond houdt. De eerste dakinspectie is altijd gratis.</p>
+          </div>
+          <div class="svc-img"><img src="../assets/service-4-inspect.jpg" loading="lazy" decoding="async" alt="Inspecteur controleert de staat van een dak" /></div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== Werkwijze ============================== -->
+  <section class="section" id="werkwijze">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <h2 data-tpl="PROCESS_TITLE">Zo snel gaat het</h2>
+        <p data-tpl="PROCESS_INTRO">Van eerste telefoontje tot garantie op papier. Vier stappen, geen tussenpersonen, alles met uw eigen vaste ploeg.</p>
+      </div>
+      <!-- 'process-grid' = generator's dynamic-grid hook (re-flows to the real step count). -->
+      <ol class="steps process-grid reveal-stagger">
+        <li class="step">
+          <div class="step-img"><img src="../assets/step-1.jpg" loading="lazy" decoding="async" alt="Klant vraagt telefonisch een offerte aan" /></div>
+          <span class="step-n mono">1</span>
+          <h3 data-tpl="STEP_1_TITLE">Aanvraag</h3>
+          <p data-tpl="STEP_1_BODY">U vraagt een gratis offerte aan, telefonisch of via het formulier.</p>
+          <span class="step-time"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12l5 5L20 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Zelfde dag contact</span>
+        </li>
+        <li class="step">
+          <div class="step-img"><img src="../assets/step-2.jpg" loading="lazy" decoding="async" alt="Dakdekker inspecteert het dak en maakt een offerte op" /></div>
+          <span class="step-n mono">2</span>
+          <h3 data-tpl="STEP_2_TITLE">Inspectie &amp; offerte</h3>
+          <p data-tpl="STEP_2_BODY">We komen langs, inspecteren het dak en sturen binnen 24 uur een heldere offerte.</p>
+          <span class="step-time"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Binnen 24 uur</span>
+        </li>
+        <li class="step">
+          <div class="step-img"><img src="../assets/step-3.jpg" loading="lazy" decoding="async" alt="Vaste ploeg dakdekkers voert het werk op het dak uit" /></div>
+          <span class="step-n mono">3</span>
+          <h3 data-tpl="STEP_3_TITLE">Uitvoering</h3>
+          <p data-tpl="STEP_3_BODY">Onze eigen ploeg voert het werk netjes en op afspraak uit.</p>
+          <span class="step-time"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 21h18M5 21V10l7-5 7 5v11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Op afspraak</span>
+        </li>
+        <li class="step">
+          <div class="step-img"><img src="../assets/step-4.jpg" loading="lazy" decoding="async" alt="Opgeleverd dak, schoon en netjes afgewerkt" /></div>
+          <span class="step-n mono">4</span>
+          <h3 data-tpl="STEP_4_TITLE">Oplevering &amp; garantie</h3>
+          <p data-tpl="STEP_4_BODY">We leveren schoon op en u krijgt 10 jaar garantie op papier.</p>
+          <span class="step-time"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 7.5 8 9 4.5-1.5 8-4 8-9V6l-8-3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>10 jaar zekerheid</span>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ============================== Waarom ============================== -->
+  <section class="section why" id="waarom">
+    <div class="wrap why-grid">
+      <!-- 'why-left' = generator's why-column hook -->
+      <div class="why-left">
+        <div class="sec-head reveal" style="margin-bottom:0;">
+          <h2 data-tpl="WHY_TITLE">Waarom mensen ons terugbellen</h2>
+          <p data-tpl="WHY_INTRO">Eerlijk advies, een vaste ploeg en garantie op papier. Dat is waarom klanten in Utrecht en omstreken al ruim 20 jaar voor ons kiezen.</p>
+        </div>
+        <div class="why-reasons reveal-stagger">
+          <div class="why-reason">
+            <span class="why-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M16 3a4 4 0 0 1 0 8M3 21v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/></svg></span>
+            <div><h3 data-tpl="WHY_1_TITLE">Eigen vaste ploeg</h3><p data-tpl="WHY_1_BODY">Geen wisselende onderaannemers; dezelfde vakmensen van offerte tot oplevering.</p></div>
+          </div>
+          <div class="why-reason">
+            <span class="why-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3 4 6v6c0 5 3.5 7.5 8 9 4.5-1.5 8-4 8-9V6l-8-3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <div><h3 data-tpl="WHY_2_TITLE">10 jaar garantie</h3><p data-tpl="WHY_2_BODY">Op al ons nieuwe dakwerk, zwart op wit. U weet precies waar u aan toe bent.</p></div>
+          </div>
+          <div class="why-reason">
+            <span class="why-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4L4.2 7.7l5.4-.8L12 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
+            <div><h3 data-tpl="WHY_3_TITLE">Erkend &amp; verzekerd</h3><p data-tpl="WHY_3_BODY">VEBIDAK-lid en volledig verzekerd, dus u loopt geen risico.</p></div>
+          </div>
+          <div class="why-reason">
+            <span class="why-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+            <div><h3 data-tpl="WHY_4_TITLE">Snel ter plaatse</h3><p data-tpl="WHY_4_BODY">Bij lekkage 24/7 bereikbaar, meestal binnen 24 uur op locatie.</p></div>
+          </div>
+        </div>
+      </div>
+      <!-- 'why-right' = generator's why-column hook (photo mosaic) -->
+      <div class="why-mosaic why-right reveal">
+        <figure class="m1"><img src="../assets/why-1.jpg" loading="lazy" decoding="async" alt="Dakdekker aan het werk op een steil pannendak" /></figure>
+        <figure><img src="../assets/why-2.jpg" loading="lazy" decoding="async" alt="Detail van vakkundig gelegde dakpannen" /></figure>
+        <figure><img src="../assets/why-3.jpg" loading="lazy" decoding="async" alt="Net opgeleverd dak met nieuwe dakgoten" /></figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== Cijfers ============================== -->
+  <section class="section stats" aria-label="Onze cijfers">
+    <div class="wrap stats-inner">
+      <div class="stats-lead reveal">
+        <h2 data-tpl="STATS_TITLE">Dit zijn wij in cijfers</h2>
+        <p data-tpl="STATS_INTRO">Geen marketingpraat, maar wat onze planning en garantiemap laten zien.</p>
+      </div>
+      <!-- 'stats' = generator's stats-grid hook; each '.stat' carries data-stat="N" -->
+      <div class="stat-row stats reveal-stagger" id="statRow">
+        <div class="stat" data-stat="1"><div class="num"><span class="count" data-to="20" data-tpl="STAT_1_VALUE">0</span><span class="suf">+</span></div><div class="lbl" data-tpl="STAT_1_LABEL">Jaar ervaring</div></div>
+        <div class="stat" data-stat="2"><div class="num"><span class="count" data-to="4,9" data-decimal data-tpl="STAT_2_VALUE">0</span></div><div class="lbl" data-tpl="STAT_2_LABEL">Klantbeoordeling</div></div>
+        <div class="stat" data-stat="3"><div class="num"><span class="count" data-to="3.000" data-tpl="STAT_3_VALUE">0</span><span class="suf">+</span></div><div class="lbl" data-tpl="STAT_3_LABEL">Daken opgeleverd</div></div>
+        <div class="stat" data-stat="4"><div class="num"><span class="count-static" data-tpl="STAT_4_VALUE">24/7</span></div><div class="lbl" data-tpl="STAT_4_LABEL">Spoedservice</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== Projecten ============================== -->
+  <section class="section" id="projecten">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <h2 data-tpl="PROJECTS_TITLE">Recent opgeleverd</h2>
+        <p data-tpl="PROJECTS_INTRO">Twee voorbeelden van werk dat we in de regio afrondden, met de aanpak en doorlooptijd erbij.</p>
+      </div>
+      <div class="projects-grid reveal-stagger">
+        <article class="project">
+          <div class="project-img"><img src="../assets/project-1.jpg" loading="lazy" decoding="async" alt="Recent dakproject" /></div>
+          <div class="project-body">
+            <span class="project-meta"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21s-7-5.2-7-10a7 7 0 0 1 14 0c0 4.8-7 10-7 10Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="11" r="2.4" stroke="currentColor" stroke-width="1.8"/></svg><span data-tpl="PROJECT_1_META">Recent project</span></span>
+            <h3 data-tpl="PROJECT_1_TITLE">Compleet pannendak vernieuwd</h3>
+            <p data-tpl="PROJECT_1_DESC">Oud dak verwijderd, nieuw isolatiepakket en keramische pannen aangebracht.</p>
+            <span class="done"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 13 4 4 10-11" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-tpl="PROJECT_1_DONE">Opgeleverd in 5 dagen</span></span>
+          </div>
+        </article>
+        <article class="project">
+          <div class="project-img"><img src="../assets/project-2.jpg" loading="lazy" decoding="async" alt="Recent dakproject" /></div>
+          <div class="project-body">
+            <span class="project-meta"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21s-7-5.2-7-10a7 7 0 0 1 14 0c0 4.8-7 10-7 10Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="11" r="2.4" stroke="currentColor" stroke-width="1.8"/></svg><span data-tpl="PROJECT_2_META">Recent project</span></span>
+            <h3 data-tpl="PROJECT_2_TITLE">Plat dak met EPDM</h3>
+            <p data-tpl="PROJECT_2_DESC">Volledig waterdicht EPDM-dak met nieuwe afvoeren aangelegd.</p>
+            <span class="done"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 13 4 4 10-11" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-tpl="PROJECT_2_DONE">10 jaar garantie</span></span>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== Reviews + team ============================== -->
+  <section class="section rev-team">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <h2 data-tpl="TM_TITLE">Wat klanten achteraf zeggen</h2>
+        <p data-tpl="TM_INTRO">Een dakdekker die terugbelt, op tijd is en netjes oplevert. Dat horen we het vaakst terug.</p>
+      </div>
+      <!-- 'tm-grid' = generator's reviews-grid hook (re-flows to the real review count) -->
+      <div class="reviews-grid tm-grid reveal-stagger">
+        <figure class="review">
+          <span class="stars" aria-label="5 van de 5 sterren">★★★★★</span>
+          <blockquote data-tpl="TM_1_QUOTE">"Binnen een dag na mijn telefoontje stond het lek droog. Keurig werk, nette mensen."</blockquote>
+          <figcaption><span data-tpl="TM_1_NAME">Familie De Wit</span>, <span data-tpl="TM_1_LABEL">Utrecht</span></figcaption>
+        </figure>
+        <figure class="review">
+          <span class="stars" aria-label="5 van de 5 sterren">★★★★★</span>
+          <blockquote data-tpl="TM_2_QUOTE">"Compleet nieuw dak gekregen, alles netjes binnen de offerte en op tijd. Aanrader."</blockquote>
+          <figcaption><span data-tpl="TM_2_NAME">J. Bakker</span>, <span data-tpl="TM_2_LABEL">Nieuwegein</span></figcaption>
+        </figure>
+        <figure class="review">
+          <span class="stars" aria-label="5 van de 5 sterren">★★★★★</span>
+          <blockquote data-tpl="TM_3_QUOTE">"Eerlijk advies, geen verrassingen achteraf. Eindelijk een dakdekker die terugbelt."</blockquote>
+          <figcaption><span data-tpl="TM_3_NAME">M. Smit</span>, <span data-tpl="TM_3_LABEL">Zeist</span></figcaption>
+        </figure>
+      </div>
+
+      <div class="team-block">
+        <div class="team-head reveal">
+          <h3 data-tpl="TEAM_TITLE">De ploeg die langskomt</h3>
+          <p data-tpl="TEAM_INTRO">Vaste gezichten, geen onderaannemers. Dit zijn de mensen die uw dak onder handen nemen.</p>
+        </div>
+        <div class="team-grid reveal-stagger">
+          <div class="member"><span class="mono-mark mono" aria-hidden="true">MB</span><h4 data-tpl="TEAM_1_NAME">Mark van den Berg</h4><p class="role" data-tpl="TEAM_1_ROLE">Eigenaar &amp; dakdekker</p></div>
+          <div class="member"><span class="mono-mark mono" aria-hidden="true">TJ</span><h4 data-tpl="TEAM_2_NAME">Tom Jansen</h4><p class="role" data-tpl="TEAM_2_ROLE">Voorman</p></div>
+          <div class="member"><span class="mono-mark mono" aria-hidden="true">YE</span><h4 data-tpl="TEAM_3_NAME">Youssef El Amrani</h4><p class="role" data-tpl="TEAM_3_ROLE">Dakdekker / loodgieter</p></div>
+          <div class="member"><span class="mono-mark mono" aria-hidden="true">DV</span><h4 data-tpl="TEAM_4_NAME">Daan Visser</h4><p class="role" data-tpl="TEAM_4_ROLE">Inspecteur &amp; planning</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== Kennis ============================== -->
+  <section class="section" id="kennis">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <h2 data-tpl="ART_TITLE">Eerst even goed geïnformeerd</h2>
+        <p data-tpl="ART_INTRO">Korte, heldere stukken over onderhoud, isolatie en materiaalkeuze, in gewone taal uitgelegd.</p>
+      </div>
+      <div class="articles-grid reveal-stagger">
+        <a class="article" href="#kennis">
+          <div class="article-img"><img src="../assets/article-1.jpg" loading="lazy" decoding="async" alt="Detail van een dak met een beginnend daklek" /></div>
+          <div class="article-body">
+            <span class="tag" data-tpl="ART_1_TAG">Onderhoud</span>
+            <h3 data-tpl="ART_1_TITLE">Zo herkent u een beginnend daklek voordat het schade geeft</h3>
+            <span class="more">Lees het artikel <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </div>
+        </a>
+        <a class="article" href="#kennis">
+          <div class="article-img"><img src="../assets/article-2.jpg" loading="lazy" decoding="async" alt="Dakisolatie wordt aangebracht onder een dak" /></div>
+          <div class="article-body">
+            <span class="tag" data-tpl="ART_2_TAG">Isolatie</span>
+            <h3 data-tpl="ART_2_TITLE">Dakisolatie in 2026: subsidies en wat het oplevert</h3>
+            <span class="more">Lees het artikel <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </div>
+        </a>
+        <a class="article" href="#kennis">
+          <div class="article-img"><img src="../assets/article-3.jpg" loading="lazy" decoding="async" alt="Verschillende dakmaterialen naast elkaar: pannen, bitumen en EPDM" /></div>
+          <div class="article-body">
+            <span class="tag" data-tpl="ART_3_TAG">Materiaal</span>
+            <h3 data-tpl="ART_3_TITLE">Pannen, bitumen of EPDM: welk dak past bij uw huis?</h3>
+            <span class="more">Lees het artikel <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== Contact / offerte ============================== -->
+  <section class="section contact" id="offerte">
+    <div class="wrap contact-grid">
+      <div class="contact-lead reveal">
+        <h2 data-tpl="CONTACT_TITLE">Vraag uw gratis offerte aan</h2>
+        <p class="intro" data-tpl="CONTACT_INTRO">Vul het formulier in of bel ons direct. U hoort binnen 24 uur van ons, met een heldere prijs en zonder verplichtingen.</p>
+        <div class="contact-info">
+          <div class="ci-row">
+            <span class="ci-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 5 5L16 13l5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+            <span><span class="lbl">Bel ons, ook spoed 24/7</span><br><a class="val" href="tel:+31301234567" data-tpl="FOOT_PHONE">030 - 123 45 67</a></span>
+          </div>
+          <div class="ci-row">
+            <span class="ci-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+            <span><span class="lbl">E-mail</span><br><a class="val" href="mailto:info@vandenbergdakwerken.nl" data-tpl="FOOT_EMAIL">info@vandenbergdakwerken.nl</a></span>
+          </div>
+          <div class="ci-row">
+            <span class="ci-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 21s-7-5.2-7-10a7 7 0 0 1 14 0c0 4.8-7 10-7 10Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="11" r="2.4" stroke="currentColor" stroke-width="1.8"/></svg></span>
+            <span><span class="lbl">Werkgebied vanuit</span><br><span class="val" data-tpl="FOOT_ADDRESS">Daalseweg 12, 3512 XK Utrecht</span></span>
+          </div>
+        </div>
+        <div class="contact-spoed">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 9v4m0 4h.01M10.3 3.9 2.4 17.5A2 2 0 0 0 4.1 20.5h15.8a2 2 0 0 0 1.7-3l-7.9-13.6a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <p><strong>Acuut lek of stormschade?</strong> Bel direct. Bij spoed zijn we 24/7 bereikbaar en meestal binnen 24 uur op locatie.</p>
+        </div>
+      </div>
+
+      <div class="form-card reveal">
+        <form id="quoteForm" novalidate>
+          <h3>Offerte aanvragen</h3>
+          <p class="sub">Velden met <span style="color:var(--err)">*</span> zijn verplicht. We bellen u terug.</p>
+
+          <div class="form-row">
+            <div class="field">
+              <label for="naam">Naam <span class="req">*</span></label>
+              <input type="text" id="naam" name="naam" autocomplete="name" placeholder="Uw naam" required />
+              <span class="error" data-for="naam">Vul uw naam in.</span>
+            </div>
+            <div class="field">
+              <label for="telefoon">Telefoon <span class="req">*</span></label>
+              <input type="tel" id="telefoon" name="telefoon" autocomplete="tel" inputmode="tel" placeholder="06 12 34 56 78" required />
+              <span class="error" data-for="telefoon">Vul een geldig telefoonnummer in.</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="email">E-mail <span class="req">*</span></label>
+            <input type="email" id="email" name="email" autocomplete="email" placeholder="naam@voorbeeld.nl" required />
+            <span class="error" data-for="email">Vul een geldig e-mailadres in.</span>
+          </div>
+
+          <div class="field">
+            <label for="type">Type aanvraag <span class="req">*</span></label>
+            <select id="type" name="type" required>
+              <option value="" disabled selected>Maak een keuze</option>
+              <option value="Lekkage">Lekkage</option>
+              <option value="Nieuw dak">Nieuw dak</option>
+              <option value="Renovatie">Renovatie</option>
+              <option value="Inspectie">Inspectie</option>
+              <option value="Anders">Anders</option>
+            </select>
+            <span class="error" data-for="type">Kies het type aanvraag.</span>
+          </div>
+
+          <div class="field">
+            <label for="bericht">Bericht <span class="hint">(optioneel)</span></label>
+            <textarea id="bericht" name="bericht" placeholder="Vertel kort wat er speelt, bijvoorbeeld het type dak of waar het lekt."></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-amber btn-lg form-submit">Verstuur aanvraag</button>
+          <p class="form-foot"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 7.5 8 9 4.5-1.5 8-4 8-9V6l-8-3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg> Geen verplichtingen. Uw gegevens gebruiken we alleen voor uw aanvraag.</p>
+        </form>
+
+        <div class="form-success" id="formSuccess" role="status" aria-live="polite">
+          <span class="fs-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4 10-11" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <h3 id="successTitle">Bedankt!</h3>
+          <p id="successMsg"></p>
+          <button type="button" class="again" id="formAgain">Nog een aanvraag doen</button>
+          <div class="harv-cta">
+            <p class="harv-kicker">Harv Agency</p>
+            <h4>Bevalt deze site?</h4>
+            <p>Laat Harv hem voor u bouwen, met dezelfde snelle aanpak.</p>
+            <a class="harv-btn" id="harvCtaBtnContact" href="https://cal.com/harv-agency/20min.nicolas" target="_blank" rel="noopener">Plan een afspraak →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============================== Footer ============================== -->
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <a class="brand" href="#header"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M2 11 12 4l10 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v9h14v-9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="brand-txt"><span data-tpl="COMPANY_NAME">Van den Berg Dakwerken</span><small>Erkend dakdekker · <span data-tpl="CITY">Utrecht</span></small></span></a>
+        <p data-tpl="FOOT_ABOUT">Erkend dakdekker in Utrecht en omstreken sinds 2003. Vaste ploeg, eerlijk advies en 10 jaar garantie op nieuw dakwerk.</p>
+      </div>
+      <div>
+        <h4 data-tpl="FOOT_COL1_TITLE">Diensten</h4>
+        <ul>
+          <li><a href="#diensten" data-tpl="SERVICE_1_NAME">Dakbedekking &amp; nieuwbouw</a></li>
+          <li><a href="#diensten" data-tpl="SERVICE_2_NAME">Dakreparatie &amp; lekkages</a></li>
+          <li><a href="#diensten" data-tpl="SERVICE_3_NAME">Renovatie &amp; vervanging</a></li>
+          <li><a href="#diensten" data-tpl="SERVICE_4_NAME">Inspectie &amp; onderhoud</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 data-tpl="FOOT_COL2_TITLE">Bedrijf</h4>
+        <ul>
+          <li><a href="#waarom" data-tpl="NAV_WHY">Waarom wij</a></li>
+          <li><a href="#werkwijze" data-tpl="NAV_PROCESS">Werkwijze</a></li>
+          <li><a href="#projecten" data-tpl="NAV_PROJECTS">Projecten</a></li>
+          <li><a href="#kennis" data-tpl="NAV_KNOWLEDGE">Kennis &amp; blog</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 data-tpl="FOOT_COL3_TITLE">Contact</h4>
+        <address>
+          <span data-tpl="FOOT_ADDRESS">Daalseweg 12, 3512 XK Utrecht</span>
+          <a href="tel:+31301234567" data-tpl="FOOT_PHONE">030 - 123 45 67</a>
+          <a href="mailto:info@vandenbergdakwerken.nl" data-tpl="FOOT_EMAIL">info@vandenbergdakwerken.nl</a>
+          <span class="hours">Ma–vr 07:30–17:00<br>Spoed 24/7 bereikbaar</span>
+        </address>
+      </div>
+    </div>
+    <div class="footer-bot">
+      <span>© 2026 <span data-tpl="COMPANY_NAME">Van den Berg Dakwerken</span></span>
+      <span>Site door Harv Agency</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ============================== Sticky mobile CTA ============================== -->
+<div class="mobile-bar" id="mobileBar" aria-label="Snelcontact">
+  <a class="btn btn-ghost mb-call" href="tel:+31301234567" style="background:var(--bg);" aria-label="Bel ons op 030 123 45 67">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 5 5L16 13l5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+    Bel nu
+  </a>
+  <a class="btn btn-amber mb-quote" href="#offerte">Gratis offerte</a>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  document.documentElement.classList.add("js");
+
+  /* ---------- Header scroll state + mobile bar ---------- */
+  var header = document.getElementById("header") || document.querySelector(".header");
+  var mobileBar = document.getElementById("mobileBar");
+  var lastShown = false;
+  var nudgeTimer = null, nudged = false;
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function scheduleNudge() {
+    if (nudged || reduceMotion || nudgeTimer) return;
+    // Subtiele attentie-bounce, pas nadat de balk even rustig in beeld staat.
+    nudgeTimer = setTimeout(function () {
+      nudgeTimer = null;
+      if (!mobileBar.classList.contains("show")) return;
+      nudged = true;
+      mobileBar.classList.add("nudge");
+    }, 2600);
+  }
+  function onScroll() {
+    var y = window.scrollY || window.pageYOffset;
+    if (header) header.classList.toggle("scrolled", y > 12);
+    var show = y > 560;
+    if (show !== lastShown) {
+      mobileBar.classList.toggle("show", show);
+      lastShown = show;
+      if (show) scheduleNudge();
+      else if (nudgeTimer) { clearTimeout(nudgeTimer); nudgeTimer = null; }
+    }
+  }
+  window.addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+
+  /* ---------- Mobile menu ---------- */
+  var burger = document.getElementById("burger");
+  var menu = document.getElementById("mobileMenu");
+  var mmClose = document.getElementById("mmClose");
+  function openMenu() {
+    menu.classList.add("open");
+    burger.setAttribute("aria-expanded", "true");
+    document.body.style.overflow = "hidden";
+    var first = menu.querySelector("a, button");
+    if (first) first.focus();
+  }
+  function closeMenu() {
+    menu.classList.remove("open");
+    burger.setAttribute("aria-expanded", "false");
+    document.body.style.overflow = "";
+  }
+  burger.addEventListener("click", openMenu);
+  mmClose.addEventListener("click", closeMenu);
+  menu.querySelectorAll("a").forEach(function (a) { a.addEventListener("click", closeMenu); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && menu.classList.contains("open")) { closeMenu(); burger.focus(); }
+  });
+
+  /* ---------- Reveal on scroll ---------- */
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var revealEls = document.querySelectorAll(".reveal, .reveal-stagger");
+  if (reduce || !("IntersectionObserver" in window)) {
+    revealEls.forEach(function (el) { el.classList.add("in"); });
+  } else {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          var el = entry.target;
+          if (el.classList.contains("reveal-stagger")) {
+            Array.prototype.forEach.call(el.children, function (child, i) {
+              child.style.transitionDelay = Math.min(i * 80, 480) + "ms";
+            });
+          }
+          el.classList.add("in");
+          io.unobserve(el);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" });
+    revealEls.forEach(function (el) { io.observe(el); });
+  }
+
+  /* ---------- Count-up ---------- */
+  function animateCount(el) {
+    var raw = el.getAttribute("data-to");
+    var isDecimal = el.hasAttribute("data-decimal");
+    if (isDecimal) {
+      var target = parseFloat(raw.replace(",", "."));
+      var start = null, dur = 1400;
+      function frame(t) {
+        if (start === null) start = t;
+        var p = Math.min((t - start) / dur, 1);
+        var eased = 1 - Math.pow(1 - p, 4);
+        el.textContent = (target * eased).toFixed(1).replace(".", ",");
+        if (p < 1) requestAnimationFrame(frame); else el.textContent = raw;
+      }
+      requestAnimationFrame(frame);
+    } else {
+      var hasDot = raw.indexOf(".") !== -1;
+      var target2 = parseInt(raw.replace(/\./g, ""), 10);
+      var start2 = null, dur2 = 1600;
+      function frame2(t) {
+        if (start2 === null) start2 = t;
+        var p = Math.min((t - start2) / dur2, 1);
+        var eased = 1 - Math.pow(1 - p, 4);
+        var val = Math.round(target2 * eased);
+        el.textContent = hasDot ? val.toLocaleString("nl-NL") : String(val);
+        if (p < 1) requestAnimationFrame(frame2); else el.textContent = raw;
+      }
+      requestAnimationFrame(frame2);
+    }
+  }
+  var statRow = document.getElementById("statRow");
+  var counted = false;
+  function runCounts() {
+    if (counted) return; counted = true;
+    document.querySelectorAll(".count").forEach(animateCount);
+  }
+  function finalizeCounts() {
+    counted = true;
+    document.querySelectorAll(".count").forEach(function (el) { el.textContent = el.getAttribute("data-to"); });
+  }
+  if (statRow) {
+    if (reduce || !("IntersectionObserver" in window)) {
+      finalizeCounts();
+    } else {
+      var sio = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) { if (e.isIntersecting) { runCounts(); sio.disconnect(); cleanupSafe(); } });
+      }, { threshold: 0.2 });
+      sio.observe(statRow);
+      // Fail-safe: very fast scroll jumps can skip the threshold crossing entirely,
+      // leaving the counters stuck at 0. Catch the row on any scroll, and if it is
+      // already scrolled past, snap straight to the final values.
+      function onScrollSafe() {
+        if (counted) { cleanupSafe(); return; }
+        var r = statRow.getBoundingClientRect();
+        if (r.bottom <= 0) { finalizeCounts(); sio.disconnect(); cleanupSafe(); }
+        else if (r.top < window.innerHeight) { runCounts(); sio.disconnect(); cleanupSafe(); }
+      }
+      function cleanupSafe() { window.removeEventListener("scroll", onScrollSafe); }
+      window.addEventListener("scroll", onScrollSafe, { passive: true });
+    }
+  }
+
+  /* ---------- Quote form validation (shared by both forms) ---------- */
+  var emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  var phoneRe = /^[\d\s()+-]{8,}$/;
+
+  function fieldOf(input) { return input.closest(".field"); }
+  function setInvalid(input, invalid) {
+    var f = fieldOf(input);
+    if (!f) return;
+    f.classList.toggle("invalid", invalid);
+    input.setAttribute("aria-invalid", invalid ? "true" : "false");
+    var err = f.querySelector(".error");
+    if (err) {
+      if (invalid) { err.id = err.id || ("err-" + input.id); input.setAttribute("aria-describedby", err.id); }
+      else { input.removeAttribute("aria-describedby"); }
+    }
+  }
+  function validateField(input) {
+    var v = (input.value || "").trim();
+    var ok = true;
+    if (input.name === "email") ok = emailRe.test(v);
+    else if (input.name === "telefoon") ok = phoneRe.test(v);
+    else if (input.hasAttribute("required")) ok = v !== "";
+    setInvalid(input, !ok);
+    return ok;
+  }
+
+  function initQuoteForm(opts) {
+    var form = document.getElementById(opts.formId);
+    var success = document.getElementById(opts.successId);
+    var title = document.getElementById(opts.titleId);
+    var msg = document.getElementById(opts.msgId);
+    var again = document.getElementById(opts.againId);
+    if (!form || !success) return;
+
+    form.querySelectorAll("input[required], select[required]").forEach(function (input) {
+      input.addEventListener("blur", function () { validateField(input); });
+      input.addEventListener("input", function () { if (fieldOf(input).classList.contains("invalid")) validateField(input); });
+      input.addEventListener("change", function () { if (input.tagName === "SELECT") validateField(input); });
+    });
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var inputs = form.querySelectorAll("input[required], select[required]");
+      var allOk = true, firstBad = null;
+      inputs.forEach(function (input) {
+        var ok = validateField(input);
+        if (!ok && !firstBad) firstBad = input;
+        if (!ok) allOk = false;
+      });
+      if (!allOk) { if (firstBad) firstBad.focus(); return; }
+
+      var naam = form.naam.value.trim();
+      var voornaam = naam.split(/\s+/)[0] || naam;
+      title.textContent = "Gefeliciteerd, " + voornaam + "!";
+      msg.textContent = "Uw aanvraag is compleet. " + ((window.__tplData && window.__tplData.COMPANY_NAME) || "Wij") + " neemt binnen 24 uur contact met u op.";
+
+      if (opts.harvBtnId) {
+        var harvBtn = document.getElementById(opts.harvBtnId);
+        if (harvBtn) {
+          var base = "https://cal.com/harv-agency/20min.nicolas";
+          var email = (form.email && form.email.value.trim()) || "";
+          var params = [];
+          if (naam) params.push("name=" + encodeURIComponent(naam));
+          if (email) params.push("email=" + encodeURIComponent(email));
+          harvBtn.href = params.length ? base + "?" + params.join("&") : base;
+        }
+      }
+
+      form.style.display = "none";
+      success.classList.add("show");
+      success.setAttribute("tabindex", "-1");
+      success.focus();
+      success.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
+    });
+
+    if (again) {
+      again.addEventListener("click", function () {
+        form.reset();
+        form.querySelectorAll(".field.invalid").forEach(function (f) { f.classList.remove("invalid"); });
+        form.querySelectorAll("[aria-invalid]").forEach(function (el) { el.setAttribute("aria-invalid", "false"); });
+        success.classList.remove("show");
+        form.style.display = "";
+        form.naam.focus();
+      });
+    }
+  }
+
+  initQuoteForm({ formId: "quoteForm", successId: "formSuccess", titleId: "successTitle", msgId: "successMsg", againId: "formAgain", harvBtnId: "harvCtaBtnContact" });
+})();
+</script>
+
+<!-- ════════════════ TEMPLATE DATA (replaced per-lead by the generator) ════════════════ -->
+<script id="template-data" type="application/json">
+{
+  "META_TITLE": "{{COMPANY_NAME}} · Erkend dakdekker in {{CITY}}",
+  "COMPANY_NAME": "Van den Berg Dakwerken",
+  "COMPANY_TAGLINE": "Erkend dakdekker, helder en direct",
+  "CITY": "Utrecht",
+
+  "NAV_HOME": "Home",
+  "NAV_ABOUT": "Over ons",
+  "NAV_SERVICES": "Diensten",
+  "NAV_PROCESS": "Werkwijze",
+  "NAV_WHY": "Waarom wij",
+  "NAV_TEAM": "Team",
+  "NAV_PROJECTS": "Projecten",
+  "NAV_KNOWLEDGE": "Kennis",
+  "NAV_CONTACT": "Contact",
+  "CTA_QUOTE": "Gratis offerte",
+
+  "HERO_BADGE": "Erkend dakdekker sinds 2003 · Utrecht e.o.",
+  "HERO_TITLE_LINE_1": "Vakwerk voor uw dak",
+  "HERO_TITLE_LINE_2": "in {{CITY}}",
+  "HERO_SUB": "Uw erkende dakdekker in Utrecht en omstreken. Van lekkage tot compleet nieuw dak, met 10 jaar garantie en een vaste ploeg vakmensen.",
+  "HERO_RATING": "4,9",
+  "HERO_REVIEW_COUNT": "210+",
+  "HERO_TRUST_1": "VEBIDAK-erkend",
+  "HERO_TRUST_2": "Volledig verzekerd",
+
+  "ASSURE_1_TITLE": "10 jaar garantie",
+  "ASSURE_1_BODY": "Op al ons nieuwe dakwerk, zwart op wit.",
+  "ASSURE_2_TITLE": "VEBIDAK-erkend",
+  "ASSURE_2_BODY": "Lid van de branchevereniging, volledig verzekerd.",
+  "ASSURE_3_TITLE": "Offerte binnen 24 uur",
+  "ASSURE_3_BODY": "Heldere prijs, geen verrassingen achteraf.",
+  "ASSURE_4_TITLE": "Eigen vaste ploeg",
+  "ASSURE_4_BODY": "Geen onderaannemers, van offerte tot oplevering.",
+
+  "SERVICES_TITLE": "Wat wij voor uw dak doen",
+  "SERVICES_INTRO": "Van een acuut lek tot een compleet nieuw dak. U weet vooraf wat u krijgt en wat het kost, uitgevoerd door onze eigen ploeg.",
+  "SERVICE_1_NAME": "Dakbedekking & nieuwbouw",
+  "SERVICE_1_DESC": "Pannen, bitumen, EPDM of zink: een nieuw dak dat decennia meegaat, vakkundig aangelegd door onze eigen ploeg.",
+  "SERVICE_2_NAME": "Dakreparatie & lekkages",
+  "SERVICE_2_DESC": "Snel een lek opgespoord en duurzaam verholpen, vaak nog dezelfde week.",
+  "SERVICE_3_NAME": "Dakrenovatie & vervanging",
+  "SERVICE_3_DESC": "Een verouderd dak compleet vernieuwd, inclusief isolatie en dakgoten.",
+  "SERVICE_4_NAME": "Inspectie & onderhoud",
+  "SERVICE_4_DESC": "Periodieke controle die kleine gebreken voor blijft en uw dak jarenlang gezond houdt. De eerste dakinspectie is altijd gratis.",
+
+  "PROCESS_TITLE": "Zo snel gaat het",
+  "PROCESS_INTRO": "Van eerste telefoontje tot garantie op papier. Vier stappen, geen tussenpersonen, alles met uw eigen vaste ploeg.",
+  "STEP_1_TITLE": "Aanvraag",
+  "STEP_1_BODY": "U vraagt een gratis offerte aan, telefonisch of via het formulier.",
+  "STEP_2_TITLE": "Inspectie & offerte",
+  "STEP_2_BODY": "We komen langs, inspecteren het dak en sturen binnen 24 uur een heldere offerte.",
+  "STEP_3_TITLE": "Uitvoering",
+  "STEP_3_BODY": "Onze eigen ploeg voert het werk netjes en op afspraak uit.",
+  "STEP_4_TITLE": "Oplevering & garantie",
+  "STEP_4_BODY": "We leveren schoon op en u krijgt 10 jaar garantie op papier.",
+
+  "WHY_TITLE": "Waarom mensen ons terugbellen",
+  "WHY_INTRO": "Eerlijk advies, een vaste ploeg en garantie op papier. Dat is waarom klanten in Utrecht en omstreken al ruim 20 jaar voor ons kiezen.",
+  "WHY_1_TITLE": "Eigen vaste ploeg",
+  "WHY_1_BODY": "Geen wisselende onderaannemers; dezelfde vakmensen van offerte tot oplevering.",
+  "WHY_2_TITLE": "10 jaar garantie",
+  "WHY_2_BODY": "Op al ons nieuwe dakwerk, zwart op wit. U weet precies waar u aan toe bent.",
+  "WHY_3_TITLE": "Erkend & verzekerd",
+  "WHY_3_BODY": "VEBIDAK-lid en volledig verzekerd, dus u loopt geen risico.",
+  "WHY_4_TITLE": "Snel ter plaatse",
+  "WHY_4_BODY": "Bij lekkage 24/7 bereikbaar, meestal binnen 24 uur op locatie.",
+
+  "STATS_TITLE": "Ruim 20 jaar boven Utrecht",
+  "STATS_INTRO": "Geen marketingpraat, maar wat onze planning en garantiemap laten zien.",
+  "STAT_1_VALUE": "20+",
+  "STAT_1_LABEL": "Jaar ervaring",
+  "STAT_2_VALUE": "4,9",
+  "STAT_2_LABEL": "Klantbeoordeling",
+  "STAT_3_VALUE": "3.000+",
+  "STAT_3_LABEL": "Daken opgeleverd",
+  "STAT_4_VALUE": "24/7",
+  "STAT_4_LABEL": "Spoedservice",
+
+  "PROJECTS_TITLE": "Recent opgeleverd",
+  "PROJECTS_INTRO": "Twee voorbeelden van werk dat we in de regio afrondden, met de aanpak en doorlooptijd erbij.",
+  "PROJECT_1_META": "Woonhuis · Utrecht",
+  "PROJECT_1_TITLE": "Compleet pannendak vernieuwd",
+  "PROJECT_1_DESC": "Oud dak verwijderd, nieuw isolatiepakket en keramische pannen aangebracht.",
+  "PROJECT_1_DONE": "Opgeleverd in 5 dagen",
+  "PROJECT_2_META": "Bedrijfspand · Nieuwegein",
+  "PROJECT_2_TITLE": "Plat dak met EPDM",
+  "PROJECT_2_DESC": "Volledig waterdicht EPDM-dak met nieuwe afvoeren aangelegd.",
+  "PROJECT_2_DONE": "10 jaar garantie",
+
+  "TM_TITLE": "Wat klanten achteraf zeggen",
+  "TM_INTRO": "Een dakdekker die terugbelt, op tijd is en netjes oplevert. Dat horen we het vaakst terug.",
+  "TM_1_QUOTE": "\"Binnen een dag na mijn telefoontje stond het lek droog. Keurig werk, nette mensen.\"",
+  "TM_1_NAME": "Familie De Wit",
+  "TM_1_LABEL": "Utrecht",
+  "TM_2_QUOTE": "\"Compleet nieuw dak gekregen, alles netjes binnen de offerte en op tijd. Aanrader.\"",
+  "TM_2_NAME": "J. Bakker",
+  "TM_2_LABEL": "Nieuwegein",
+  "TM_3_QUOTE": "\"Eerlijk advies, geen verrassingen achteraf. Eindelijk een dakdekker die terugbelt.\"",
+  "TM_3_NAME": "M. Smit",
+  "TM_3_LABEL": "Zeist",
+
+  "TEAM_TITLE": "De ploeg die langskomt",
+  "TEAM_INTRO": "Vaste gezichten, geen onderaannemers. Dit zijn de mensen die uw dak onder handen nemen.",
+  "TEAM_1_NAME": "Mark van den Berg",
+  "TEAM_1_ROLE": "Eigenaar & dakdekker",
+  "TEAM_2_NAME": "Tom Jansen",
+  "TEAM_2_ROLE": "Voorman",
+  "TEAM_3_NAME": "Youssef El Amrani",
+  "TEAM_3_ROLE": "Dakdekker / loodgieter",
+  "TEAM_4_NAME": "Daan Visser",
+  "TEAM_4_ROLE": "Inspecteur & planning",
+
+  "ART_TITLE": "Eerst even goed geïnformeerd",
+  "ART_INTRO": "Korte, heldere stukken over onderhoud, isolatie en materiaalkeuze, in gewone taal uitgelegd.",
+  "ART_1_TAG": "Onderhoud",
+  "ART_1_TITLE": "Zo herkent u een beginnend daklek voordat het schade geeft",
+  "ART_2_TAG": "Isolatie",
+  "ART_2_TITLE": "Dakisolatie in 2026: subsidies en wat het oplevert",
+  "ART_3_TAG": "Materiaal",
+  "ART_3_TITLE": "Pannen, bitumen of EPDM: welk dak past bij uw huis?",
+
+  "CONTACT_TITLE": "Vraag uw gratis offerte aan",
+  "CONTACT_INTRO": "Vul het formulier in of bel ons direct. U hoort binnen 24 uur van ons, met een heldere prijs en zonder verplichtingen.",
+
+  "FOOT_ABOUT": "Erkend dakdekker in Utrecht en omstreken sinds 2003. Vaste ploeg, eerlijk advies en 10 jaar garantie op nieuw dakwerk.",
+  "FOOT_COL1_TITLE": "Diensten",
+  "FOOT_COL2_TITLE": "Bedrijf",
+  "FOOT_COL3_TITLE": "Contact",
+  "FOOT_PHONE": "030 - 123 45 67",
+  "FOOT_EMAIL": "info@vandenbergdakwerken.nl",
+  "FOOT_ADDRESS": "Daalseweg 12, 3512 XK Utrecht",
+  "FOOT_COPYRIGHT": "© 2026 Van den Berg Dakwerken · KvK 12345678 · VEBIDAK-erkend",
+  "LOGO_URL": ""
+}
+</script>
+
+<!-- ════════════════ TEMPLATE HYDRATION ════════════════ -->
+<script>
+  (function () {
+    const dataEl = document.getElementById('template-data');
+    if (!dataEl) return;
+    let data = {};
+    try { data = JSON.parse(dataEl.textContent); } catch (e) { console.error('template-data JSON parse error', e); return; }
+    window.__tplData = data;
+
+    function resolve(value, depth) {
+      if (depth > 4) return value;
+      if (typeof value !== 'string') return value;
+      return value.replace(/\{\{([A-Z0-9_]+)\}\}/g, function (m, key) {
+        if (data[key] !== undefined) return resolve(data[key], depth + 1);
+        return m;
+      });
+    }
+
+    function hydrate() {
+      // text content
+      document.querySelectorAll('[data-tpl]').forEach(function (el) {
+        const key = el.getAttribute('data-tpl');
+        if (data[key] !== undefined) el.textContent = resolve(data[key], 0);
+      });
+      // attribute bindings: data-tpl-attr="KEY:attribute,KEY2:attribute"
+      document.querySelectorAll('[data-tpl-attr]').forEach(function (el) {
+        const spec = el.getAttribute('data-tpl-attr');
+        spec.split(',').forEach(function (pair) {
+          const [k, attr] = pair.split(':').map(function (s) { return s.trim(); });
+          if (data[k] !== undefined && attr) el.setAttribute(attr, resolve(data[k], 0));
+        });
+      });
+      // page title
+      if (data.META_TITLE) document.title = resolve(data.META_TITLE, 0);
+      // Hide nav phone pill when FOOT_PHONE is empty
+      const phoneEl = document.getElementById('nav-phone');
+      if (phoneEl) {
+        const phoneVal = (data.FOOT_PHONE || '').trim();
+        phoneEl.hidden = !phoneVal;
+        if (phoneVal) {
+          phoneEl.setAttribute('href', 'tel:' + phoneVal.replace(/[^0-9+]/g, ''));
+        }
+      }
+    }
+
+    window.__tplHydrate = hydrate;
+    window.__tplSet = function (patch) {
+      Object.assign(data, patch);
+      dataEl.textContent = JSON.stringify(data, null, 2);
+      hydrate();
+    };;
+
+    hydrate();
+
+    // ── Template B: toon alleen wat echt is (rule 2b) + echte contactlinks ──
+    (function () {
+      try { window.__degRan = true;
+      function tx(el){ return el ? (el.textContent || '').replace(/\s+/g,' ').trim() : ''; }
+      function hide(el){ if (el) el.style.display = 'none'; }
+      function allStock(s){ if(!s) return false; var im=s.querySelectorAll('img'); return im.length>0 && Array.prototype.every.call(im,function(i){return (i.getAttribute('src')||'').indexOf('../assets')===0;}); }
+      // Contactlinks (bel/mail) → echte partij.
+      var ph=(data.FOOT_PHONE||'').replace(/[^0-9+]/g,''), em=(data.FOOT_EMAIL||'').trim();
+      document.querySelectorAll('.contact-info a[href^="tel:"]').forEach(function(a){ if(ph) a.setAttribute('href','tel:'+ph); });
+      document.querySelectorAll('.contact-info a[href^="mailto:"]').forEach(function(a){ if(em.indexOf('@')>0) a.setAttribute('href','mailto:'+em); });
+      // Reviews: alleen de volle; geen enkele → reviewblok (+ kop) weg.
+      var rg=document.querySelector('.rev-team .reviews-grid'), full=0;
+      if(rg){ Array.prototype.forEach.call(rg.querySelectorAll('.review'),function(r){ var q=tx(r.querySelector('blockquote')).replace(/["'“”‘’]/g,'').trim(); if(q.length>2) full++; else hide(r); });
+        if(full===0){ hide(rg); hide(rg.previousElementSibling); } else rg.style.gridTemplateColumns='repeat('+Math.min(full,3)+',minmax(0,1fr))'; }
+      // Team: alleen leden met echte naam; geen enkele → teamblok weg.
+      var tb=document.querySelector('.rev-team .team-block'), named=0;
+      if(tb){ Array.prototype.forEach.call(tb.querySelectorAll('.member'),function(m){ if(tx(m.querySelector('h4')).length>0) named++; else hide(m); }); if(named<1) hide(tb); }
+      if(full===0 && named<1) hide(document.querySelector('.rev-team'));
+      // Projecten/Kennis met alléén stock-beeld zijn niet écht van de partij → weg.
+      ['projecten','kennis'].forEach(function(id){ var s=document.getElementById(id); if(s && allStock(s)) hide(s); });
+      } catch(e){ window.__degErr = String((e && e.message) || e); }
+    })();
+  })();
+</script>
+
+<!-- Per-lead Harv booking bubble + tracking pixel (injected by the generator).
+     De wrapper houdt de onvervulde {{...}}-placeholders onzichtbaar in de kale template;
+     de generator-bubbel is position:fixed en ontsnapt aan deze off-screen wrapper, de
+     tracking-pixel laadt gewoon. -->
+<div aria-hidden="true" style="position:absolute;left:-9999px;top:0;width:1px;height:1px;overflow:hidden">{{HARV_PRESENTED_BY}}{{TRACKING_PIXEL}}</div>
+
+<!-- Fallback company data for the multi-step quote widget (hydration above is authoritative;
+     this only fills COMPANY_NAME if hydration did not run, e.g. JSON parse failure). -->
+<script>
+  window.__tplData = window.__tplData || {};
+  if (!window.__tplData.COMPANY_NAME) window.__tplData.COMPANY_NAME = "";
+</script>
+<script>window.__qwCombinedContact = true;</script>
+<script type="text/babel" src="../quote-widget.jsx"></script>
+</body>
+</html>

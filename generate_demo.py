@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -48,7 +49,7 @@ REQUEST_TIMEOUT_S = 15
 MAX_STYLESHEETS = 5
 USER_AGENT = "HarvDemoGenerator/0.2 (+https://harvagency.com)"
 
-DEPLOY_BASE_URL = "https://harv-demos.vercel.app"
+DEPLOY_BASE_URL = "https://harvagency.com"
 DEPLOY_POLL_INTERVAL_S = 10
 DEPLOY_TIMEOUT_S = 180
 
@@ -1349,6 +1350,78 @@ def build_tracking_pixel_url(lead_id: str, slug: str) -> str:
     )
 
 
+_NOINDEX_META = ('<meta name="robots" content="noindex,nofollow,noarchive">'
+                 '<meta name="googlebot" content="noindex,nofollow">')
+
+
+def _ensure_noindex(html: str) -> str:
+    """Zorg dat elke demo-pagina `noindex,nofollow` heeft.
+
+    Per-lead demo's zijn niet bedoeld voor Google: indexeren van honderden
+    bijna-identieke pagina's schaadt de SEO van de hoofdsite en lekt klant-demo's
+    naar de zoekresultaten. We injecteren de meta-tags direct na <head>.
+    """
+    if "noindex" in html.lower():
+        return html
+    import re
+    m = re.search(r"<head[^>]*>", html, flags=re.IGNORECASE)
+    if m:
+        return html[: m.end()] + _NOINDEX_META + html[m.end():]
+    # Geen <head>? Plak het vooraan zodat het in elk geval aanwezig is.
+    return _NOINDEX_META + html
+
+
+def build_tracking_html(lead_id: str, slug: str) -> str:
+    """Volledige tracking-snippet voor een demo-pagina.
+
+    Bevat: (1) open-pixel als <img> (werkt ook zonder JS), en (2) een klein
+    script dat scroll_50/scroll_100, cta_click en duration (tijd-op-pagina)
+    meet en via `navigator.sendBeacon` naar /track-demo stuurt. sendBeacon met
+    URLSearchParams = een CORS-'simple request', dus geen preflight nodig.
+    """
+    from urllib.parse import quote_plus
+    scheme = "http" if TRACKING_DOMAIN.startswith(("localhost", "127.0.0.1")) else "https"
+    base = f"{scheme}://{TRACKING_DOMAIN}/track-demo"
+    px = build_tracking_pixel_url(lead_id, slug)
+    lid = _html_escape(lead_id)
+    sg = _html_escape(slug)
+    img = (f'<img src="{px}" width="1" height="1" alt="" '
+           f'style="position:absolute;left:-9999px;top:auto" />')
+    script = f"""<script>
+(function(){{
+  var URL="{base}",LID={lid!r},SG={sg!r},t0=Date.now(),sent={{}};
+  function beacon(ev,val){{
+    try{{
+      var p=new URLSearchParams({{lead_id:LID,slug:SG,event:ev}});
+      if(val!=null)p.set('value',val);
+      navigator.sendBeacon(URL,p);
+    }}catch(e){{}}
+  }}
+  function onScroll(){{
+    var h=document.documentElement,b=document.body;
+    var st=h.scrollTop||b.scrollTop,sh=(h.scrollHeight||b.scrollHeight)-h.clientHeight;
+    var pct=sh>0?(st/sh*100):0;
+    if(pct>=50&&!sent.s50){{sent.s50=1;beacon('scroll_50');}}
+    if(pct>=90&&!sent.s100){{sent.s100=1;beacon('scroll_100');}}
+  }}
+  window.addEventListener('scroll',onScroll,{{passive:true}});
+  document.addEventListener('click',function(e){{
+    var el=e.target.closest&&e.target.closest('#quote-widget-mount,a[href*="cal.com"],[data-cta],.harv-cta,.qw-submit,.book,.cta');
+    if(el&&!sent.cta){{sent.cta=1;beacon('cta_click');}}
+  }},true);
+  function flush(){{
+    if(sent.dur)return;sent.dur=1;
+    beacon('duration',Math.round((Date.now()-t0)/1000));
+  }}
+  document.addEventListener('visibilitychange',function(){{
+    if(document.visibilityState==='hidden')flush();
+  }});
+  window.addEventListener('pagehide',flush);
+}})();
+</script>"""
+    return img + script
+
+
 def build_nav_html(nav_items: list[str]) -> str:
     """Genereer aaneengesloten `<a href="#">tekst</a>` tags voor de nav-bar."""
     if not nav_items:
@@ -1445,9 +1518,1564 @@ TEMPLATES_ROOT = REPO_ROOT / "templates"
 # Sector → template-bestand. Voeg hier een regel toe als een sector-template klaar is.
 SECTOR_TEMPLATES: dict[str, str] = {
     "makelaardij": "makelaardij-a.html",
-    "dakdekker": "dakdekkers-a.html",
-    "dakdekkers": "dakdekkers-a.html",
+    "dakdekker": "Roofer/dakdekkers-a.html",
+    "dakdekkers": "Roofer/dakdekkers-a.html",
 }
+
+
+DAKDEKKER_SECTORS = {"dakdekker", "dakdekkers"}
+
+# Generieke scheidingstekens in bedrijfsnamen ("Dakdekker A'dam | Loomans").
+_NAME_SPLIT_RE = re.compile(r"\s*[|·•]\s*|\s+[–—-]\s+")
+
+
+def clean_company_name(raw: Optional[str]) -> str:
+    """Maak een nette weergavenaam van een gescrapete bedrijfsnaam.
+
+    Veel Google-titels zijn 'Dakdekker Amsterdam | Dakdekkersbedrijf Loomans'.
+    We pakken het meest merk-achtige deel (meestal het laatste segment) en
+    knippen geo/keyword-ruis weg, zonder ooit iets te verzinnen.
+    """
+    if not raw:
+        return ""
+    parts = [p.strip() for p in _NAME_SPLIT_RE.split(raw) if p.strip()]
+    if not parts:
+        return raw.strip()
+    # Voorkeur: het langste segment dat niet puur een plaats/keyword is.
+    generic = ("dakdekker amsterdam", "dakdekker", "dakdekkers", "dakwerken")
+    candidates = [p for p in parts if p.lower() not in generic] or parts
+    # Kies het segment met de meeste woorden (meestal de echte bedrijfsnaam).
+    name = max(candidates, key=lambda p: (len(p.split()), len(p)))
+    return re.sub(r"\s+", " ", name).strip()
+
+
+def _stars(rating: Any) -> str:
+    """Sterren-string op basis van een echte rating (1-5). Leeg bij geen rating."""
+    try:
+        r = float(str(rating).replace(",", "."))
+    except (TypeError, ValueError):
+        return ""
+    if r <= 0:
+        return ""
+    filled = max(1, min(5, int(round(r))))
+    return "★" * filled + "☆" * (5 - filled)
+
+
+def _trim(text: Optional[str], limit: int = 240) -> str:
+    """Kort een (echte) tekst netjes in op een woordgrens."""
+    if not text:
+        return ""
+    t = re.sub(r"\s+", " ", str(text)).strip()
+    if len(t) <= limit:
+        return t
+    cut = t[:limit].rsplit(" ", 1)[0].rstrip(",.;:")
+    return cut + "…"
+
+
+def lead_to_demo_data(lead: dict[str, Any]) -> dict[str, Any]:
+    """Map één lead-record (uit leads.db / Notion) naar het `data`-contract dat
+    `render_demo` voor dakdekkers verwacht.
+
+    ALLES is echte brondata. `google_reviews` wordt geparsed naar een lijst.
+    Niets wordt verzonnen; ontbrekende velden blijven leeg.
+    """
+    reviews: list[dict[str, Any]] = []
+    raw_reviews = lead.get("google_reviews")
+    if raw_reviews:
+        try:
+            parsed = json.loads(raw_reviews) if isinstance(raw_reviews, str) else raw_reviews
+            if isinstance(parsed, list):
+                reviews = [r for r in parsed if isinstance(r, dict) and (r.get("text") or "").strip()]
+        except (ValueError, TypeError):
+            reviews = []
+
+    contact_naam = (lead.get("contact_naam") or "").strip()
+    beschrijving = (lead.get("bedrijf_beschrijving") or "").strip()
+
+    return {
+        "bedrijfsnaam": lead.get("bedrijfsnaam") or "",
+        "website": lead.get("website") or "",
+        "id": lead.get("id") or "",
+        "stad": lead.get("stad") or "",
+        "regio": lead.get("regio") or "",
+        "telefoonnummer": lead.get("telefoonnummer") or "",
+        "adres": lead.get("adres") or "",
+        "email": lead.get("email") or "",
+        "google_rating": lead.get("google_rating") or "",
+        "google_reviews": reviews,
+        "bedrijf_beschrijving": beschrijving,
+        "logo_url": lead.get("logo_url") or "",
+        "contact_naam": contact_naam,
+        "primaire_kleur": lead.get("primaire_kleur") or "",
+        # Sub-structuur die harv_kit.ai_demo_content leest:
+        "content": {
+            "about": beschrijving,
+            "services": [],
+            "reviews": reviews,
+            "rating": lead.get("google_rating") or None,
+            "tagline": None,
+        },
+        "team": {"members": [{"naam": contact_naam}] if contact_naam else []},
+    }
+
+
+# WordPress/Gutenberg default palette — deze kleuren staan in bijna ELKE WP-site
+# en zijn dus NOOIT de echte merkkleur. Uitsluiten bij kleurdetectie.
+_WP_DEFAULT_HEXES = {
+    "#cf2e2e", "#ff6900", "#fcb900", "#7bdcb5", "#00d084", "#8ed1fc", "#0693e3",
+    "#9b51e0", "#abb8c3", "#eb144c", "#f78da7", "#9900ef", "#cc3366", "#ffffff",
+    "#000000",
+}
+_CITY_AFTER_POSTCODE_RE = re.compile(r"\b\d{4}\s?[A-Z]{2}\b\s+([A-Za-zÀ-ÿ'’.\-\s]+)")
+
+
+def _city_from_address(adres: Optional[str], fallback: str = "") -> str:
+    """Haal de ECHTE vestigingsplaats uit het adres (niet de scrape-stad).
+
+    'Nieuwezijds Voorburgwal 104, 1012 SG Amsterdam, Nederland' -> 'Amsterdam'.
+    Valt terug op `fallback` (de scrape-stad) als het adres geen plaats prijsgeeft.
+    """
+    if adres:
+        # 1) plaats direct na de postcode
+        m = _CITY_AFTER_POSTCODE_RE.search(adres)
+        if m:
+            city = m.group(1).strip(" ,.")
+            city = re.split(r",|\bNederland\b|\bThe Netherlands\b", city)[0].strip(" ,.")
+            if city:
+                return city
+        # 2) anders: voorlaatste comma-segment (… , Plaats , Nederland)
+        parts = [p.strip() for p in adres.split(",") if p.strip()]
+        parts = [p for p in parts if p.lower() not in ("nederland", "the netherlands")]
+        if parts:
+            last = re.sub(r"\b\d{4}\s?[A-Z]{2}\b", "", parts[-1]).strip()
+            if last and not re.search(r"\d", last):
+                return last
+    return fallback or ""
+
+
+def _hex_to_rgb(h: str) -> tuple[int, int, int]:
+    h = h.lstrip("#")
+    return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+
+
+def _is_neutralish(h: str) -> bool:
+    try:
+        r, g, b = _hex_to_rgb(h)
+    except (ValueError, IndexError):
+        return True
+    mx, mn = max(r, g, b), min(r, g, b)
+    if mx - mn < 28:          # grijstinten
+        return True
+    if mx > 244 and mn > 230:  # bijna wit
+        return True
+    if mx < 28:                # bijna zwart
+        return True
+    return False
+
+
+def _darken(h: str, factor: float = 0.42) -> str:
+    r, g, b = _hex_to_rgb(h)
+    return "#%02x%02x%02x" % (int(r * factor), int(g * factor), int(b * factor))
+
+
+def detect_brand_colors(html: str, extra_css: str = "") -> tuple[Optional[str], Optional[str]]:
+    """Bepaal (accent, dark) merkkleur op basis van frequentie in de site-CSS,
+    met uitsluiting van WP-default-palet en neutrale tinten.
+
+    Retourneert (None, None) als er geen duidelijke merkkleur te vinden is.
+    """
+    from collections import Counter
+    blob = (html or "") + "\n" + (extra_css or "")
+    counts: Counter[str] = Counter()
+    for m in re.findall(r"#[0-9a-fA-F]{6}\b", blob):
+        h = m.lower()
+        if h in _WP_DEFAULT_HEXES or _is_neutralish(h):
+            continue
+        counts[h] += 1
+    if not counts:
+        return None, None
+    accent = counts.most_common(1)[0][0]
+    # Dark: donkerste voldoende-frequente niet-neutrale kleur, anders accent verdonkeren
+    dark = None
+    for h, _n in counts.most_common(12):
+        r, g, b = _hex_to_rgb(h)
+        if (r + g + b) / 3 < 70:
+            dark = h
+            break
+    if not dark:
+        dark = _darken(accent, 0.42)
+    return accent, dark
+
+
+def _clean_visible_text(soup: "BeautifulSoup", limit: int = 7000) -> str:
+    for tag in soup(["script", "style", "noscript", "svg"]):
+        tag.decompose()
+    txt = re.sub(r"\s+", " ", soup.get_text(" ", strip=True))
+    return txt[:limit]
+
+
+def fetch_site_bundle(url: str) -> dict[str, Any]:
+    """Haal homepage + een paar voor de hand liggende subpagina's op en lever
+    de ruwe bouwstenen voor personalisatie: tekst, css, kleur-html, projectkaarten."""
+    headers = {"User-Agent": USER_AGENT, "Accept-Language": "nl,en;q=0.8"}
+    bundle: dict[str, Any] = {"html": "", "text": "", "css": "", "project_cards": [], "service_cards": [], "image_pool": []}
+    try:
+        resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT_S, allow_redirects=True)
+        resp.raise_for_status()
+    except requests.RequestException:
+        return bundle
+    home_html = resp.text
+    final_url = resp.url
+    home_soup = BeautifulSoup(home_html, "html.parser")
+    bundle["html"] = home_html
+
+    # Eerste linked stylesheet meenemen voor kleurdetectie (kort).
+    try:
+        link = home_soup.find("link", rel=lambda v: v and "stylesheet" in v)
+        if link and link.get("href"):
+            css_url = urljoin(final_url, link["href"])
+            css = requests.get(css_url, headers=headers, timeout=8).text
+            bundle["css"] = css[:120000]
+    except requests.RequestException:
+        pass
+
+    # Projectkaarten deterministisch uit de homepage (img + kop + tekst).
+    bundle["project_cards"] = _extract_project_cards(home_soup, final_url)
+    # Beeld-pool van de homepage: echte foto's met alt, om slots te vullen.
+    bundle["image_pool"] = _imgs_with_alt(home_soup, final_url)
+
+    # Tekst van homepage + subpagina's voor de AI-extractie.
+    texts = [_clean_visible_text(BeautifulSoup(home_html, "html.parser"), 6000)]
+    for path in ("/over-ons/", "/diensten/", "/werkwijze/", "/aanpak/", "/projecten/", "/referenties/"):
+        try:
+            sub = requests.get(urljoin(final_url, path), headers=headers, timeout=8, allow_redirects=True)
+            if sub.status_code == 200:
+                sub_soup = BeautifulSoup(sub.text, "html.parser")
+                texts.append(_clean_visible_text(BeautifulSoup(sub.text, "html.parser"), 3500))
+                if not bundle["project_cards"] and ("project" in path or "referen" in path):
+                    bundle["project_cards"] = _extract_project_cards(sub_soup, final_url)
+                if "dienst" in path:
+                    # De /diensten-pagina heeft vaak de échte dienstfoto's met
+                    # sprekende alts ("Dakreparatie", …) — voeg ze toe aan de pool.
+                    pool_urls = {it["url"] for it in bundle["image_pool"]}
+                    bundle["image_pool"] += [it for it in _imgs_with_alt(sub_soup, final_url)
+                                             if it["url"] not in pool_urls]
+                if not bundle["service_cards"] and "dienst" in path:
+                    bundle["service_cards"] = _service_cards_from_diensten(sub_soup, final_url, headers)
+        except requests.RequestException:
+            continue
+    if not bundle["service_cards"]:
+        bundle["service_cards"] = _service_cards_from_diensten(home_soup, final_url, headers)
+    bundle["text"] = "\n\n".join(t for t in texts if t)[:14000]
+    return bundle
+
+
+def _extract_project_cards(soup: "BeautifulSoup", base_url: str) -> list[dict[str, str]]:
+    """Vind echte project/referentie-kaarten: een blok met een ECHTE foto plus
+    een kop en omschrijving. Alleen tonen als er minimaal beschrijvende tekst is
+    (geen verzonnen content)."""
+    cards: list[dict[str, str]] = []
+    for fig in soup.find_all(["figure", "article", "div"]):
+        img = fig.find("img")
+        if not img:
+            continue
+        src = img.get("src") or img.get("data-src") or ""
+        if not re.search(r"\.(jpe?g|png|webp)(\?|$)", src, re.I):
+            continue
+        if any(k in src.lower() for k in ("logo", "icon", "favicon", "avatar", "placeholder")):
+            continue
+        head = fig.find(["h2", "h3", "h4"])
+        cap = fig.find("figcaption") or fig.find("p")
+        title = head.get_text(" ", strip=True) if head else ""
+        desc = cap.get_text(" ", strip=True) if cap else ""
+        if title and len(desc) >= 25:
+            cards.append({
+                "image": urljoin(base_url, src),
+                "title": title[:80],
+                "desc": re.sub(r"\s+", " ", desc)[:220],
+            })
+        if len(cards) >= 4:
+            break
+    # dedupe op image
+    seen, out = set(), []
+    for c in cards:
+        if c["image"] not in seen:
+            seen.add(c["image"]); out.append(c)
+    return out
+
+
+def _salvage_json(s: str) -> Optional[dict[str, Any]]:
+    """Probeer afgekapte JSON te repareren: sluit open haken, of trim naar het
+    laatste complete object. Retourneert None als het echt niet lukt."""
+    def _close(frag: str) -> str:
+        frag = frag.rstrip().rstrip(",")
+        ob = frag.count("{") - frag.count("}")
+        obk = frag.count("[") - frag.count("]")
+        return frag + "]" * max(0, obk) + "}" * max(0, ob)
+
+    try:
+        return json.loads(_close(s))
+    except json.JSONDecodeError:
+        pass
+    for m in reversed([mm.start() for mm in re.finditer(r"\}", s)]):
+        try:
+            return json.loads(_close(s[: m + 1]))
+        except json.JSONDecodeError:
+            continue
+    return None
+
+
+_SERVICE_SLUG_SKIP = {
+    "", "diensten", "over-ons", "faq", "blog", "blogs", "contact", "home",
+    "offerte", "privacy", "privacybeleid", "algemene-voorwaarden", "sitemap",
+    "cookiebeleid", "spoedservice", "werkgebied", "vacatures",
+}
+_SERVICE_PRIORITY = [
+    "dakreparatie", "daklekkage", "platte-daken", "dakinspectie", "dakonderhoud",
+    "epdm-dakbedekking", "dakbedekking", "dakgoten", "bitumen-dak", "schoorstenen",
+    "nokvorsten", "stormschade", "dakisolatie", "dakkapel",
+]
+
+# Junk we never want to treat as content imagery (logos, badges, sprites, …).
+_IMG_SKIP = ("logo", "icon", "favicon", "avatar", "placeholder", "sprite",
+             "trustoo", "google", "whatsapp", "banner", "pixel")
+
+
+def _imgs_with_alt(soup: "BeautifulSoup", base_url: str) -> list[dict[str, str]]:
+    """Collect real content images (with their alt text) so they can be matched
+    to template slots. Skips logos/icons/badges. De-duped on URL, in DOM order."""
+    out: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for im in soup.find_all("img"):
+        src = im.get("src") or im.get("data-src") or im.get("data-lazy-src") or ""
+        if not re.search(r"\.(jpe?g|png|webp)(\?|$)", src, re.I):
+            continue
+        if any(k in src.lower() for k in _IMG_SKIP):
+            continue
+        url = urljoin(base_url, src)
+        if url in seen:
+            continue
+        seen.add(url)
+        out.append({"url": url, "alt": re.sub(r"\s+", " ", (im.get("alt") or "")).strip()})
+    return out
+
+
+def _match_image(name: str, pool: list[dict[str, str]], used: set) -> Optional[str]:
+    """Pick the pool image whose alt best matches a slot name (word overlap).
+    Skips already-used URLs so each real photo lands in only one slot."""
+    nset = set(re.findall(r"[a-z]{4,}", (name or "").lower()))
+    best, score = None, 0
+    for it in pool:
+        url = it.get("url")
+        if not url or url in used:
+            continue
+        aset = set(re.findall(r"[a-z]{4,}", (it.get("alt") or "").lower()))
+        s = len(nset & aset)
+        if s > score:
+            best, score = url, s
+    if best and score >= 1:
+        used.add(best)
+        return best
+    return None
+
+
+def _service_cards_from_diensten(soup: "BeautifulSoup", base_url: str, headers: dict, limit: int = 4) -> list[dict[str, str]]:
+    """Bouw dienstkaarten uit de ECHTE detailpagina's per dienst: titel + foto +
+    korte omschrijving, rechtstreeks van de site (zoals de gebruiker vroeg)."""
+    from urllib.parse import urlparse
+    host = urlparse(base_url).netloc
+    cand: dict[str, tuple[str, str]] = {}
+    for a in soup.find_all("a", href=True):
+        href = urljoin(base_url, a["href"])
+        p = urlparse(href)
+        if p.netloc != host:
+            continue
+        parts = [x for x in p.path.split("/") if x]
+        if len(parts) != 1:  # alleen top-level dienstpagina's
+            continue
+        slug = parts[0].lower()
+        if slug in _SERVICE_SLUG_SKIP:
+            continue
+        if not re.search(r"dak|epdm|nok|schoorsteen|goot|storm|bitumen|isolatie|lood|zink", slug):
+            continue
+        text = a.get_text(" ", strip=True)
+        if text and slug not in cand:
+            cand[slug] = (text[:40], href)
+
+    # Volgorde: prioriteit eerst, dan paginavolgorde
+    ordered = [s for s in _SERVICE_PRIORITY if s in cand] + [s for s in cand if s not in _SERVICE_PRIORITY]
+
+    cards: list[dict[str, str]] = []
+    for slug in ordered:
+        if len(cards) >= limit:
+            break
+        title, url = cand[slug]
+        try:
+            d = requests.get(url, headers=headers, timeout=8)
+            if d.status_code != 200:
+                continue
+            ds = BeautifulSoup(d.text, "html.parser")
+        except requests.RequestException:
+            continue
+        img = ""
+        for im in ds.find_all("img"):
+            src = im.get("src") or im.get("data-src") or ""
+            if "wp-content/uploads" in src and re.search(r"\.(jpe?g|png|webp)(\?|$)", src, re.I) \
+                    and not re.search(r"logo|icon|favicon|avatar|placeholder", src, re.I):
+                img = urljoin(url, src)
+                break
+        desc = ""
+        md = ds.find("meta", attrs={"name": "description"})
+        if md and md.get("content"):
+            desc = md["content"]
+        if not desc:
+            for para in ds.find_all("p"):
+                t = para.get_text(" ", strip=True)
+                if len(t) >= 50:
+                    desc = t
+                    break
+        h1 = ds.find("h1")
+        title = (h1.get_text(" ", strip=True) if h1 else title) or title
+        if img:
+            cards.append({"image": img, "title": _trim(title, 40), "desc": _trim(desc, 150)})
+    return cards
+
+
+def ai_site_extract(site_text: str, *, company: str, city: str) -> dict[str, Any]:
+    """Eén Claude-call die ECHTE, gepersonaliseerde content uit de sitetekst haalt.
+
+    Verzint niets: lege lijst/false bij afwezigheid. Retourneert process-stappen,
+    on-site testimonials, certificering/garantie-signalen, diensten en about.
+    """
+    empty = {"process": [], "testimonials": [], "services": [], "why": [], "stats": [], "about": "",
+             "certified": False, "insured": False, "guarantee": False,
+             "service_area": "", "years_experience": "", "emergency": False, "free_quote": False,
+             "own_team": False, "fast_response": False, "projects_done": "", "customers": "",
+             "_cost_eur": 0.0}
+    import os as _os
+    key = _os.environ.get("ANTHROPIC_API_KEY", "")
+    if not key or not site_text.strip():
+        return empty
+    try:
+        import anthropic
+    except ImportError:
+        return empty
+
+    prompt = f"""Je bent de content-strateeg van Harv Agency. Hieronder staat de
+ECHTE zichtbare tekst van de website van een dakdekkersbedrijf ({company}, {city}).
+Haal hieruit feiten op om een gepersonaliseerde demo te vullen.
+
+STRIKTE REGELS:
+- Verzin NIETS. Gebruik alleen wat echt in de tekst staat.
+- Onbekend? Lege lijst of false.
+- Schrijf in natuurlijk Nederlands. NOOIT een gedachtestreepje, gebruik komma of punt.
+
+Geef EXACT dit JSON-object terug (alleen JSON, geen uitleg, geen markdown):
+{{
+  "process": [{{"title": "korte staptitel zoals op de site", "body": "1 korte zin"}}],
+  "testimonials": [{{"text": "echte review op de site, max 200 tekens", "author": "naam indien vermeld, anders leeg"}}],
+  "services": [{{"name": "dienst zoals op de site", "desc": "1 korte zin"}}],
+  "why": [{{"title": "KWALITATIEVE reden om te kiezen, GEEN puur cijfer (bv. VCA gecertificeerd, persoonlijke service, scherpe prijzen, veilig werken op hoogte, klantgericht), max 4 woorden", "body": "1 korte zin"}}],
+  "stats": [{{"value": "kort cijfer zoals letterlijk op de site, bv. 22+, 15, 24/7", "label": "waar het cijfer over gaat, bv. Jaar ervaring, Jaar garantie, Geslaagde projecten, Certificaten"}}],
+  "about": "1 a 2 zinnen over het bedrijf, alleen op basis van de tekst, zonder verzonnen cijfers of jaartallen",
+  "certified": true/false,
+  "insured": true/false,
+  "guarantee": true/false,
+  "service_area": "dekkingsgebied zoals LETTERLIJK op de site (bv. 'Den Haag en regio', 'Zuid-Holland', 'Den Haag en omstreken'); leeg indien onbekend",
+  "years_experience": "jaren ervaring OF oprichtingsjaar als getal (bv. '20' of '2003'); leeg indien onbekend",
+  "emergency": true/false,
+  "free_quote": true/false,
+  "own_team": true/false,
+  "fast_response": true/false,
+  "projects_done": "echt aantal opgeleverde daken/projecten als getal; leeg indien onbekend",
+  "customers": "echt aantal tevreden klanten als getal; leeg indien onbekend"
+}}
+
+LIMIETEN (belangrijk, anders wordt het antwoord afgekapt):
+- process: max 4 stappen
+- testimonials: max 3, elk max 200 tekens
+- services: max 4
+- why: max 4 kwalitatieve pluspunten van de site, GEEN cijfers (die horen bij stats)
+- stats: max 4, ALLEEN cijfers die echt op de site staan (geen verzonnen cijfers); leeg laten als er geen cijfers zijn
+- houd alle teksten kort
+
+WEBSITE-TEKST:
+{site_text}"""
+
+    try:
+        client = anthropic.Anthropic(api_key=key)
+        msg = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=2000,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = msg.content[0].text.strip()
+        inp, out = msg.usage.input_tokens, msg.usage.output_tokens
+        cost = (inp * 0.80 / 1e6 + out * 4.00 / 1e6) * 0.93
+        print(f"  🤖 ai_site_extract: {inp}+{out} tokens = €{cost:.4f}")
+        raw = re.sub(r"^```(?:json)?|```$", "", raw.strip(), flags=re.MULTILINE).strip()
+        match = re.search(r"\{.*\}", raw, re.DOTALL)
+        if not match:
+            return empty
+        try:
+            res = json.loads(match.group())
+        except json.JSONDecodeError:
+            # Bij afkapping: probeer het grootste geldige JSON-prefix te herstellen.
+            res = _salvage_json(match.group())
+            if res is None:
+                return empty
+        # sanitize
+        def _clean(s: Any) -> str:
+            return re.sub(r"\s*[—–]\s*", ", ", str(s or "")).strip()
+        out_d: dict[str, Any] = {
+            "process": [{"title": _clean(p.get("title")), "body": _clean(p.get("body"))}
+                        for p in (res.get("process") or []) if isinstance(p, dict) and p.get("title")][:4],
+            "testimonials": [{"text": _clean(t.get("text")), "author": _clean(t.get("author"))}
+                             for t in (res.get("testimonials") or []) if isinstance(t, dict) and len(str(t.get("text") or "")) > 20][:6],
+            "services": [{"name": _clean(s.get("name")), "desc": _clean(s.get("desc"))}
+                         for s in (res.get("services") or []) if isinstance(s, dict) and s.get("name")][:4],
+            "why": [{"title": _clean(w.get("title")), "body": _clean(w.get("body"))}
+                    for w in (res.get("why") or []) if isinstance(w, dict) and w.get("title")][:4],
+            "stats": [{"value": _clean(st.get("value"))[:8], "label": " ".join(_clean(st.get("label")).split()[:2])}
+                      for st in (res.get("stats") or []) if isinstance(st, dict) and st.get("value") and st.get("label")][:4],
+            "about": _clean(res.get("about"))[:400],
+            "certified": bool(res.get("certified")),
+            "insured": bool(res.get("insured")),
+            "guarantee": bool(res.get("guarantee")),
+            "service_area": _clean(res.get("service_area"))[:40],
+            "years_experience": _clean(res.get("years_experience"))[:8],
+            "emergency": bool(res.get("emergency")),
+            "free_quote": bool(res.get("free_quote")),
+            "own_team": bool(res.get("own_team")),
+            "fast_response": bool(res.get("fast_response")),
+            "projects_done": _clean(res.get("projects_done"))[:8],
+            "customers": _clean(res.get("customers"))[:8],
+            "_cost_eur": round(cost, 5),
+        }
+        return out_d
+    except Exception as exc:  # noqa: BLE001
+        print(f"  ⚠ ai_site_extract faalde: {type(exc).__name__}: {exc}")
+        return empty
+
+
+def build_dakdekker_template_data(
+    data: dict[str, Any],
+    ai_content: dict[str, Any],
+    extract: Optional[dict[str, Any]] = None,
+    colors: Optional[tuple[Optional[str], Optional[str]]] = None,
+) -> dict[str, Any]:
+    """Bouw het volledige `template-data` JSON-object voor de dakdekker-template
+    uit ECHTE leaddata. Secties zonder echte data worden via SHOW_*-vlaggen en
+    lege waarden verborgen (geen verzonnen cijfers, reviews of projecten)."""
+    extract = extract or {}
+    accent, dark = colors or (None, None)
+
+    naam = clean_company_name(data.get("bedrijfsnaam"))
+    # ECHTE vestigingsplaats uit het adres (niet de scrape-stad — bv. Hoorn≠Amsterdam).
+    city = _city_from_address(data.get("adres"), (data.get("stad") or "")).strip()
+    rating = data.get("google_rating")
+    contact_naam = (data.get("contact_naam") or "").strip()
+    year = datetime.now().year
+
+    rating_str = ""
+    if rating not in (None, "", 0):
+        try:
+            rating_str = f"{float(str(rating).replace(',', '.')):.1f}"
+        except (TypeError, ValueError):
+            rating_str = ""
+
+    # About: AI-extractie van de site heeft voorkeur, anders de verrijkte DB-tekst.
+    beschrijving = (extract.get("about") or "").strip() or (data.get("bedrijf_beschrijving") or "").strip()
+
+    # ── Reviews: ALLEEN echte Google-reviews, ALLEEN goede (>=4 sterren) ──
+    def _is_recent(t: str) -> bool:
+        t = (t or "").lower()
+        if any(w in t for w in ("uur", "dag", "dagen", "gisteren", "vandaag", "week", "weken")):
+            return True
+        return bool(re.search(r"\b(1|een|één)\s+maand", t))
+
+    merged: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for rv in (data.get("google_reviews") or []):
+        try:
+            r_i = int(round(float(str(rv.get("rating") or rating or 0).replace(",", "."))))
+        except (TypeError, ValueError):
+            r_i = 0
+        if r_i < 4:  # commercieel: alleen goede reviews tonen
+            continue
+        text = _trim(rv.get("text"), 240)
+        if not text:
+            continue
+        k = text.lower()[:40]
+        if k in seen:
+            continue
+        seen.add(k)
+        t = str(rv.get("time") or "").strip()
+        label = "Via Google" + (f" · {t}" if _is_recent(t) else "")
+        merged.append({
+            "text": text,
+            "author": (rv.get("author") or "Klant").strip(),
+            "stars": _stars(r_i) or "★★★★★",
+            "label": label,
+        })
+    merged = merged[:6]
+    n_rev = len(merged)
+
+    # Commerciële kadering op basis van aantal reviews.
+    if n_rev <= 1:
+        tm_eyebrow, tm_t1, tm_acc = "Klantervaring", "Onze meest", "recente review"
+        tm_intro = "Rechtstreeks van Google."
+    elif n_rev == 2:
+        tm_eyebrow, tm_t1, tm_acc = "Klantervaringen", "Wat klanten", "zeggen"
+        tm_intro = "Twee uitgelichte beoordelingen, rechtstreeks van Google."
+    else:
+        tm_eyebrow, tm_t1, tm_acc = "Klantervaringen", "Wat klanten", "zeggen"
+        tm_intro = "Echte beoordelingen van klanten, rechtstreeks van Google."
+
+    # ── Process: hun eigen stappen indien gevonden, anders generieke werkwijze ──
+    site_steps = extract.get("process") or []
+    if len(site_steps) >= 2:
+        steps = [{"title": s["title"], "body": s.get("body", "")} for s in site_steps][:4]
+        process_intro = "Zo pakken wij uw dakklus aan, helder en stap voor stap."
+    else:
+        steps = [
+            {"title": "Adviesgesprek", "body": "We bekijken uw situatie en bespreken de mogelijkheden."},
+            {"title": "Offerte op maat", "body": "U krijgt een heldere offerte met planning en materialen."},
+            {"title": "Uitvoering", "body": "Het werk wordt netjes en zorgvuldig uitgevoerd."},
+            {"title": "Oplevering", "body": "Een laatste controle en alles wordt opgeruimd achtergelaten."},
+        ]
+        process_intro = "Een helder proces met duidelijke communicatie in elke stap."
+
+    # ── Diensten: het meest persoonlijke wint. ──
+    #   1) echte dienstkaarten van de site (titel + tekst + FOTO)
+    #   2) anders door AI uit de sitetekst gehaalde diensten (titel + tekst)
+    #   3) anders nette standaardcategorieën
+    site_service_cards = [c for c in (extract.get("service_cards") or []) if c.get("image") and c.get("title")]
+    site_services = extract.get("services") or []
+    services_generic = False
+    if len(site_service_cards) >= 2:
+        # Echte dienstnamen + teksten van de site; afbeeldingen blijven stock
+        # (de detailpagina-foto's zijn niet betrouwbaar te vinden).
+        services = [{"name": _trim(c["title"], 40), "desc": _trim(c.get("desc", ""), 160)}
+                    for c in site_service_cards][:4]
+    elif len(site_services) >= 2:
+        services = [{"name": s["name"], "desc": s.get("desc", "")} for s in site_services][:4]
+    else:
+        services = [
+            {"name": "Dak plaatsen", "desc": "Vakkundige aanleg van een nieuw dak met degelijke materialen."},
+            {"name": "Dakreparatie", "desc": "Snel verhelpen van lekkages, schade en losse dakpannen."},
+            {"name": "Dakvervanging", "desc": "Vervanging van een versleten dak, netjes en duurzaam uitgevoerd."},
+            {"name": "Dakinspectie", "desc": "Controle van de staat van uw dak met een helder advies."},
+        ]
+        services_generic = True
+
+    # ── Waarom ons: hun ECHTE pluspunten van de site, anders veilige generieke ──
+    site_why = extract.get("why") or []
+    if len(site_why) >= 2:
+        whies = [{"title": _trim(w["title"], 34), "body": _trim(w.get("body", ""), 130)} for w in site_why][:4]
+    else:
+        whies = [
+            {"title": "Vrijblijvende offerte", "body": "U ontvangt vooraf een duidelijke offerte, zonder verplichtingen."},
+            {"title": "Persoonlijk contact", "body": "Korte lijnen en heldere communicatie van begin tot eind."},
+            {"title": (f"Lokaal in {city}" if city else "Lokaal actief"),
+             "body": (f"Actief in {city} en omgeving, dus snel ter plaatse." if city
+                      else "Actief in de regio, dus snel bij u ter plaatse.")},
+            {"title": "Vakkundig uitgevoerd", "body": "Net en zorgvuldig werk met oog voor een goede afwerking."},
+        ]
+
+    # ── Cijfers boven 'Waarom ons': vaste, geprioriteerde pool van 8 kandidaten.
+    #    Vul de eerste 4 die we ECHT van de site kunnen afleiden (nooit verzinnen).
+    #    Bewust GEEN sterren-rating (zit in de hero) en GEEN cert/verzekerd/garantie
+    #    (zitten in de trust-marks). Werkgebied past zich aan de site aan. ──
+    _PROVS = ("zuid-holland", "noord-holland", "noord-brabant", "gelderland", "utrecht",
+              "overijssel", "limburg", "friesland", "groningen", "drenthe", "flevoland", "zeeland")
+
+    def _exp_value(raw):
+        m = re.search(r"(19|20)\d{2}", raw or "")
+        if m:
+            yrs = year - int(m.group())
+            if yrs < 3:
+                return ""
+            return f"{(yrs // 5) * 5}+" if yrs >= 10 else f"{yrs}+"
+        m2 = re.search(r"\d{1,3}", raw or "")
+        return f"{int(m2.group())}+" if m2 and int(m2.group()) >= 3 else ""
+
+    def _count_value(raw):
+        m = re.search(r"\d[\d.\s]{0,6}\d|\d", raw or "")
+        return (m.group().replace(" ", "") + "+") if m else ""
+
+    _regio_l = (data.get("regio") or "").replace("-", " ").lower()
+    def _area_value(raw, city_):
+        a = re.sub(r"\s+", " ", (raw or "").strip())
+        low = a.lower()
+        # Provincie ALLEEN als de site 'm noemt EN het de echte regio van de klant is
+        # (voorkomt 'Utrecht' voor een Den Haag-bedrijf dat meerdere steden noemt).
+        for prov in _PROVS:
+            pl = prov.replace("-", " ")
+            if pl in low and pl in _regio_l:
+                return (prov.title(), "Werkgebied")
+        # Anders: de geverifieerde vestigingsplaats. Noemt de site meerdere
+        # plaatsen / een provincie / "regio" -> label "Werkgebied" (breder),
+        # anders "& omstreken".
+        if city_:
+            wider = bool(re.search(r",|\bprovincie\b|\bregio\b|omstreken|omgeving", a)) \
+                    or any(pp.replace("-", " ") in low for pp in _PROVS)
+            return (city_, "Werkgebied" if wider else "& omstreken")
+        return None
+
+    _pool = []
+    _ev = _exp_value(extract.get("years_experience"))
+    if _ev:
+        _pool.append({"value": _ev, "label": "Jaar ervaring"})
+    _area = _area_value(extract.get("service_area"), city)
+    if _area:
+        _pool.append({"value": _area[0], "label": _area[1]})
+    if extract.get("emergency"):
+        _pool.append({"value": "24/7", "label": "Bereikbaar bij spoed"})
+    if extract.get("free_quote"):
+        _pool.append({"value": "Gratis", "label": "Offerte & inspectie"})
+    if extract.get("own_team"):
+        _pool.append({"value": "100%", "label": "Eigen vaste ploeg"})
+    if extract.get("fast_response"):
+        _pool.append({"value": "<24u", "label": "Reactie op aanvraag"})
+    _pd = _count_value(extract.get("projects_done"))
+    if _pd:
+        _pool.append({"value": _pd, "label": "Daken opgeleverd"})
+    _cu = _count_value(extract.get("customers"))
+    if _cu:
+        _pool.append({"value": _cu, "label": "Tevreden klanten"})
+    # dedup op waarde (geen 2x 'Gratis'/'24/7'), behoud prioriteitsvolgorde, max 4
+    _seen, stats = set(), []
+    for _s in _pool:
+        k = _s["value"].lower()
+        if k in _seen:
+            continue
+        _seen.add(k)
+        stats.append(_s)
+        if len(stats) >= 4:
+            break
+    show_stats = len(stats) >= 2
+
+    # Dedup: laat why-punten weg die hetzelfde cijfer/onderwerp als een stat tonen.
+    _stat_words = set()
+    for s in stats:
+        for w in re.findall(r"[a-z0-9/]+", (s["label"] + " " + s["value"]).lower()):
+            if len(w) >= 3 or "/" in w:
+                _stat_words.add(w)
+    _stop = {"jaar", "de", "het", "een", "van", "ons", "onze"}
+
+    def _dups_stat(title: str) -> bool:
+        words = [w for w in re.findall(r"[a-z0-9/]+", title.lower()) if w not in _stop]
+        return any(w in _stat_words for w in words)
+
+    # Why ontdubbelen t.o.v. de cijfers + aanvullen met veilige, niet-numerieke redenen.
+    generic_why = [
+        {"title": "Persoonlijk contact", "body": "Korte lijnen en heldere communicatie van begin tot eind."},
+        {"title": (f"Lokaal in {city}" if city else "Lokaal actief"),
+         "body": (f"Actief in {city} en omgeving, dus snel ter plaatse." if city
+                  else "Actief in de regio, dus snel bij u ter plaatse.")},
+        {"title": "Vrijblijvende offerte", "body": "U ontvangt vooraf een duidelijke offerte, zonder verplichtingen."},
+        {"title": "Vakkundig uitgevoerd", "body": "Net en zorgvuldig werk met oog voor een goede afwerking."},
+    ]
+    whies = [w for w in whies if not _dups_stat(w["title"])]
+    for g in generic_why:
+        if len(whies) >= 4:
+            break
+        if any(g["title"].lower() == w["title"].lower() for w in whies) or _dups_stat(g["title"]):
+            continue
+        whies.append(g)
+    whies = whies[:4]
+
+    projects = [p for p in (extract.get("project_cards") or []) if p.get("image") and p.get("title")][:3]
+    certified = bool(extract.get("certified"))
+    insured = bool(extract.get("insured"))
+    guarantee = bool(extract.get("guarantee"))
+
+    td: dict[str, Any] = {
+        "META_TITLE": f"{naam} — Dakdekker" + (f" in {city}" if city else ""),
+        "COMPANY_NAME": naam,
+        "COMPANY_TAGLINE": "",
+        "NAV_HOME": "Home", "NAV_ABOUT": "Over ons", "NAV_SERVICES": "Diensten",
+        "NAV_TEAM": "Team", "NAV_PROJECTS": "Projecten", "NAV_CONTACT": "Contact",
+        "CTA_QUOTE": "Offerteaanvraag",
+        # Hero-eyebrow badge: alleen "24/7 bereikbaar" als de partij dat echt
+        # biedt, anders leeg → de template verbergt het badge (geen filler).
+        "HERO_BADGE": ("24/7 bereikbaar" if extract.get("emergency") else ""),
+        "HERO_TITLE_LINE_1": "Vakwerk voor elk",
+        "HERO_TITLE_LINE_2": "dak boven uw hoofd",
+        "CITY": city,
+        "HERO_CTA_PRIMARY": "Neem contact op",
+        "HERO_RATING": rating_str,
+        "HERO_REVIEW_COUNT": ("Klantbeoordeling op Google" if rating_str else ""),
+        "QUOTE_HEADING": "", "QUOTE_FIELD_NAME": "", "QUOTE_FIELD_PHONE": "",
+        "QUOTE_FIELD_EMAIL": "", "QUOTE_FIELD_SERVICE": "", "QUOTE_FIELD_POSTCODE": "",
+        "QUOTE_FIELD_ADDRESS": "", "QUOTE_FIELD_MESSAGE": "", "QUOTE_SUBMIT": "",
+
+        "ABOUT_EYEBROW": "Over ons",
+        "ABOUT_TITLE_1": "Uw vertrouwde",
+        "ABOUT_TITLE_ACCENT": "dakdekker",
+        "ABOUT_TITLE_2": (f"in {city}" if city else ""),
+        "ABOUT_BODY": beschrijving or (ai_content.get("local_intro") or ""),
+        "ABOUT_CTA_PRIMARY": "Meer over ons",
+        "ABOUT_CALLBACK": "Vraag terugbelverzoek aan",
+
+        "WHY_EYEBROW": "Waarom ons",
+        "WHY_TITLE_1": "Waarom kiezen voor",
+        "WHY_TITLE_ACCENT": "ons",
+        "WHY_INTRO": "Betrouwbaar dakwerk met heldere afspraken en persoonlijk contact.",
+
+        "SERVICES_EYEBROW": "Diensten",
+        "SERVICES_TITLE_1": "Uw", "SERVICES_TITLE_ACCENT": "dakwerk",
+        "SERVICES_TITLE_2": "volledig verzorgd",
+
+        "PROCESS_EYEBROW": "Hoe wij werken",
+        "PROCESS_TITLE_1": "Van offerte tot",
+        "PROCESS_TITLE_ACCENT": "oplevering",
+        "PROCESS_INTRO": process_intro,
+        "PROCESS_CTA": "Vraag een offerte",
+
+        "PROJECTS_EYEBROW": "Projecten",
+        "PROJECTS_TITLE_1": "Onze uitgelichte",
+        "PROJECTS_TITLE_ACCENT": "projecten",
+        "PROJECTS_INTRO": "Een greep uit recent werk.",
+
+        "TEAM_EYEBROW": "Ons team",
+        "TEAM_TITLE_1": "Maak kennis met",
+        "TEAM_TITLE_ACCENT": "het team",
+        "TEAM_INTRO": "De mensen die uw dak verzorgen.",
+        "TEAM_CTA": "Team",
+        "TEAM_1_NAME": contact_naam, "TEAM_1_ROLE": ("Aanspreekpunt" if contact_naam else ""),
+        "TEAM_2_NAME": "", "TEAM_2_ROLE": "",
+        "TEAM_3_NAME": "", "TEAM_3_ROLE": "",
+        "TEAM_4_NAME": "", "TEAM_4_ROLE": "",
+
+        "TM_EYEBROW": tm_eyebrow,
+        "TM_TITLE_1": tm_t1,
+        "TM_TITLE_ACCENT": tm_acc,
+        "TM_INTRO": tm_intro,
+
+        "ART_EYEBROW": "", "ART_TITLE_1": "", "ART_TITLE_ACCENT": "", "ART_TITLE_2": "",
+        "ART_1_TAG": "", "ART_1_DATE": "", "ART_1_TITLE": "",
+        "ART_2_TAG": "", "ART_2_DATE": "", "ART_2_TITLE": "",
+        "ART_3_TAG": "", "ART_3_DATE": "", "ART_3_TITLE": "",
+        "ART_CTA": "",
+
+        "FOOT_ABOUT": (f"Dakwerk in {city} en omgeving." if city else "Vakkundig dakwerk in de regio."),
+        "FOOT_COL1_TITLE": "Diensten", "FOOT_COL2_TITLE": "Bedrijf", "FOOT_COL3_TITLE": "Contact",
+        "FOOT_PHONE": data.get("telefoonnummer") or "",
+        "FOOT_EMAIL": data.get("email") or "",
+        "FOOT_ADDRESS": data.get("adres") or "",
+        "FOOT_COPYRIGHT": f"© {year} {naam}." if naam else f"© {year}.",
+        "LOGO_URL": data.get("logo_url") or "",
+
+        # ── Zichtbaarheidsvlaggen ──
+        "SHOW_STATS": show_stats,
+        "SHOW_PROJECTS": len(projects) >= 2,
+        "SHOW_ARTICLES": False,
+        "SHOW_WHY": True,
+        "SHOW_TEAM": True,
+
+        # ── Interne data voor de baking-stap (underscore = niet in de embed-JSON) ──
+        "_STEPS": steps,
+        "_SERVICES": services,
+        "_REVIEWS": merged,
+        "_PROJECTS": projects,
+        "_CERTIFIED": certified,
+        "_INSURED": insured,
+        "_GUARANTEE": guarantee,
+        "_ACCENT": accent,
+        "_DARK": dark,
+        "_SERVICES_GENERIC": services_generic,
+        "_N_REVIEWS": n_rev,
+        "_WHY": whies,
+        "_STATS": stats,
+    }
+
+    for i in range(1, 5):
+        sd = stats[i - 1] if i - 1 < len(stats) else None
+        td[f"STAT_{i}_VALUE"] = sd["value"] if sd else ""
+        td[f"STAT_{i}_LABEL"] = sd["label"] if sd else ""
+
+    # Steps/services ook als platte data-tpl waarden (voor de eerste N kaarten).
+    for i in range(1, 5):
+        st = steps[i - 1] if i - 1 < len(steps) else None
+        td[f"STEP_{i}_TITLE"] = st["title"] if st else ""
+        td[f"STEP_{i}_BODY"] = st.get("body", "") if st else ""
+        sv = services[i - 1] if i - 1 < len(services) else None
+        td[f"SERVICE_{i}_NAME"] = sv["name"] if sv else ""
+        td[f"SERVICE_{i}_DESC"] = sv.get("desc", "") if sv else ""
+        wy = whies[i - 1] if i - 1 < len(whies) else None
+        td[f"WHY_{i}_TITLE"] = wy["title"] if wy else ""
+        td[f"WHY_{i}_BODY"] = wy.get("body", "") if wy else ""
+
+    # Testimonials ook plat (eerste 4) voor de no-JS fallback; baking maakt ze dynamisch.
+    for i in range(1, 5):
+        rev = merged[i - 1] if i - 1 < len(merged) else None
+        td[f"TM_{i}_QUOTE"] = rev["text"] if rev else ""
+        td[f"TM_{i}_NAME"] = (rev["author"] or "Klant") if rev else ""
+        td[f"TM_{i}_LABEL"] = rev["label"] if rev else ""
+        td[f"TM_{i}_STARS"] = rev["stars"] if rev else ""
+
+    # Echte site-foto's (alt + url) voor het vullen van dienst-/why-slots in de bake.
+    td["_IMAGE_POOL"] = extract.get("image_pool") or []
+
+    return td
+
+
+def _bake_dakdekker_dom(html: str, td: dict[str, Any]) -> str:
+    """Bak de echte waarden + sectie-zichtbaarheid server-side in de raw HTML.
+
+    Hierdoor staat er NERGENS nep-default-data in de bron (ook niet voor
+    no-JavaScript bezoekers of scrapers): lege/onbekende velden worden leeggezet
+    en secties zonder echte data worden volledig verwijderd.
+    """
+    from urllib.parse import quote_plus
+    from copy import copy as _copy
+
+    soup = BeautifulSoup(html, "html.parser")
+
+    def is_set(key: str) -> bool:
+        return str(td.get(key) or "").strip() != ""
+
+    def _strip_tpl(node) -> None:
+        if node.has_attr("data-tpl"):
+            del node["data-tpl"]
+        for el in node.select("[data-tpl]"):
+            del el["data-tpl"]
+
+    # <title>
+    if td.get("META_TITLE"):
+        title_el = soup.find("title")
+        if title_el:
+            title_el.string = str(td["META_TITLE"])
+
+    # ── Echte merkkleuren toepassen (override op de :root tokens) ──
+    accent, dark = td.get("_ACCENT"), td.get("_DARK")
+    if accent:
+        def _mixw(h: str, amt: float) -> str:
+            r, g, b = _hex_to_rgb(h)
+            return "#%02x%02x%02x" % (
+                int(r + (255 - r) * amt), int(g + (255 - g) * amt), int(b + (255 - b) * amt))
+        dark = dark or _darken(accent, 0.42)
+        css = (
+            ":root{"
+            f"--c-accent:{accent} !important;"
+            f"--c-accent-soft:{_mixw(accent, 0.85)} !important;"
+            f"--c-dark:{dark} !important;"
+            f"--c-dark-soft:{_mixw(dark, 0.12)} !important;"
+            "}"
+        )
+        head = soup.find("head")
+        if head:
+            st = soup.new_tag("style", id="harv-brand")
+            st.string = css
+            head.append(st)
+
+    # ── Esthetische + responsieve tweaks ──
+    n_steps = len([s for s in (td.get("_STEPS") or []) if s.get("title")]) or 4
+    n_rev = int(td.get("_N_REVIEWS") or 0)
+    n_stats = len([s for s in (td.get("_STATS") or []) if s.get("value")]) or 4
+    tm_cols = n_rev if 1 <= n_rev <= 4 else 3
+    desktop = (
+        "@media(min-width:760px){"
+        "body:not(.preview-mobile) .process-grid{grid-template-columns:repeat(" + str(min(n_steps, 4)) + ",1fr)}"
+        "body:not(.preview-mobile) .tm-grid{grid-template-columns:repeat(" + str(tm_cols) + ",1fr)}"
+        # Cijfers passend op het echte aantal (niet de grootte van 4)
+        "body:not(.preview-mobile) .stats{grid-template-columns:repeat(" + str(min(n_stats, 4)) + ",1fr)}"
+        # USP's uitlijnen met de afbeeldingen (rechterkolom iets lager)
+        "body:not(.preview-mobile) .why-right{padding-top:92px}}"
+    )
+    head = soup.find("head")
+    if head:
+        tw = soup.new_tag("style", id="harv-tweaks")
+        tw.string = (
+            "#about{padding-bottom:36px}"
+            ".why-left h2{margin-bottom:24px}"
+            ".why-list{gap:2px}"
+            ".why-item{padding:14px 0}"
+            ".process-head{margin-bottom:26px}"
+            ".tm-head{align-items:center}"
+            # Mobiele actiebalk (telefoon-icoon + offerteaanvraag), sticky onderin
+            ".harv-mobilebar{display:none;position:sticky;bottom:0;z-index:9000;gap:10px;padding:10px 14px;"
+            "background:rgba(255,255,255,.96);border-top:1px solid var(--c-line);box-shadow:0 -6px 20px rgba(0,0,0,.10)}"
+            ".harv-mobilebar a{display:inline-flex;align-items:center;justify-content:center;gap:8px;"
+            "border-radius:12px;font-weight:700;font-size:15px;text-decoration:none;height:50px}"
+            ".harv-mobilebar .harv-mb-phone{width:50px;flex:0 0 50px;background:var(--c-accent);color:#fff}"
+            ".harv-mobilebar .harv-mb-quote{flex:1;background:var(--c-dark);color:#fff}"
+            "body.preview-mobile.harv-intro-done .harv-mobilebar{display:flex}"
+            "body.preview-mobile .sticky-cta{display:none}"
+            "@media(max-width:759px){body.harv-intro-done .harv-mobilebar{display:flex}.sticky-cta{display:none}}"
+            # Telefoonframe: actiebalk volledig tot onderaan (geen gat)
+            "body.preview-mobile .page{padding-bottom:0}"
+            + desktop +
+            "body.preview-mobile .process-grid{grid-template-columns:1fr}"
+            "body.preview-mobile .tm-grid{grid-template-columns:1fr}"
+            "body.preview-mobile .stats{grid-template-columns:repeat(" + str(min(n_stats, 3)) + ",1fr)}"
+            "@media(max-width:759px){.process-grid{grid-template-columns:1fr}.tm-grid{grid-template-columns:1fr}}"
+        )
+        head.append(tw)
+
+    # 'Waarom ons' iets hoger laten beginnen.
+    whysec = soup.find(id="why")
+    if whysec:
+        whysec["style"] = "padding-top:28px"
+
+    # ── Mobiele actiebalk: tel-icoon + offerteaanvraag, in het telefoonframe ──
+    page = soup.select_one(".page")
+    if page:
+        phone = str(td.get("FOOT_PHONE") or "").strip()
+        tel = "tel:" + re.sub(r"[^0-9+]", "", phone) if phone else ""
+        bar = '<div class="harv-mobilebar">'
+        if tel:
+            bar += (f'<a class="harv-mb-phone" href="{tel}" aria-label="Bel ons">'
+                    '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+                    'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
+                    '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 '
+                    '19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.7 2.81a2 2 0 0 1-.45 '
+                    '2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.33 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/>'
+                    '</svg></a>')
+        bar += '<a class="harv-mb-quote" href="#quote">Offerteaanvraag</a></div>'
+        page.append(BeautifulSoup(bar, "html.parser"))
+        # Mobiele balk pas tonen NA de welkomst-animatie (niet vooraf).
+        reveal = (
+            "(function(){function d(){document.body.classList.add('harv-intro-done');}"
+            "var ov=document.getElementById('intro-overlay');"
+            "if(!ov){d();return;}setTimeout(d,5400);"
+            "var s=ov.querySelector('.intro-skip');if(s)s.addEventListener('click',d);})();"
+        )
+        sc = soup.new_tag("script")
+        sc.string = reveal
+        page.append(sc)
+
+    # data-tpl text bindings (echte waarde, leeg toegestaan)
+    for el in soup.select("[data-tpl]"):
+        key = el.get("data-tpl")
+        if key in td:
+            el.string = str(td[key])
+
+    # data-tpl-attr attribuut-bindings ("LOGO_URL:src")
+    for el in soup.select("[data-tpl-attr]"):
+        for pair in (el.get("data-tpl-attr") or "").split(","):
+            if ":" in pair:
+                k, attr = [s.strip() for s in pair.split(":", 1)]
+                if k in td and attr:
+                    el[attr] = str(td[k])
+
+    # Logo vs naam-tekst: precies één tonen
+    if is_set("LOGO_URL"):
+        for e in soup.select(".logo-text"):
+            e.decompose()
+    else:
+        for e in soup.select(".logo-img"):
+            e.decompose()
+
+    # Hero-rating/reviews alleen bij echte Google-rating
+    if not is_set("HERO_RATING"):
+        for e in soup.select(".reviews, .ms-reviews"):
+            e.decompose()
+
+    # ── Trust-marks: waarheidsgetrouw op basis van site-signalen ──
+    # Markup-volgorde van de template: [0]=cert, [1]=verzekerd, [2]=garantie.
+    # Belangrijk: NOOIT het icoon-vakje (.tm-ic) overschrijven (dan komt er tekst
+    # in het icoon en overlapt het). Alleen .tm-num/.tm-sub vullen, en alleen met
+    # GENERIEK-ware labels (nooit een specifiek keurmerk als "VEBIDAK" of een
+    # termijn als "10 jaar" verzinnen). Niet-gedetecteerde marks worden weggelaten.
+    def _set_mark(mark, num_txt, sub_txt):
+        n = mark.select_one(".tm-num")
+        s = mark.select_one(".tm-sub")
+        if n:
+            n.string = num_txt
+        if s:
+            s.string = sub_txt
+        mark["title"] = num_txt
+    marks = soup.select(".trust-marks .trust-mark")
+    if len(marks) >= 3:
+        m_cert, m_insured, m_guar = marks[0], marks[1], marks[2]
+        if td.get("_CERTIFIED"):
+            _set_mark(m_cert, "Gecertificeerd", "erkend dakdekkersbedrijf")
+        else:
+            m_cert.decompose()
+        if td.get("_INSURED"):
+            _set_mark(m_insured, "Verzekerd", "bedrijfs- & aansprakelijkheid")
+        else:
+            m_insured.decompose()
+        if td.get("_GUARANTEE"):
+            _set_mark(m_guar, "Garantie", "op materiaal & uitvoering")
+        else:
+            m_guar.decompose()
+
+    # Stats (count-up): tonen bij echte cijfers; lege kaarten weg
+    if td.get("SHOW_STATS") is True:
+        for i, st in enumerate(soup.select(".stats .stat"), 1):
+            if not is_set(f"STAT_{i}_VALUE"):
+                st.decompose()
+    else:
+        for e in soup.select(".stats"):
+            e.decompose()
+
+    # ── Process: trim naar het echte aantal stappen ──
+    for i, step in enumerate(soup.select(".process-grid .step"), 1):
+        if not is_set(f"STEP_{i}_TITLE"):
+            step.decompose()
+
+    # ── Diensten: stock-afbeeldingen; de 'platte daken'-kaart krijgt de plat-dak foto ──
+    _FLAT_IMG = "/demo-assets/dakdekkers/service-4-inspect.jpg"   # echte plat-dak foto
+    _STOCK_POOL = [
+        "/demo-assets/dakdekkers/service-1-install.jpg",
+        "/demo-assets/dakdekkers/service-2-repair.jpg",
+        "/demo-assets/dakdekkers/service-3-replace.jpg",
+    ]
+    _svc_rows = []
+    for i, row in enumerate(soup.select(".services-list .service-row"), 1):
+        if not is_set(f"SERVICE_{i}_NAME"):
+            row.decompose()
+        else:
+            _svc_rows.append(row)
+    _pool = td.get("_IMAGE_POOL") or []
+    _used: set = set()
+    _pi = 0
+    for row in _svc_rows:
+        h3 = row.select_one("h3")
+        slot = row.select_one(".img-slot")
+        if not slot:
+            continue
+        nm = h3.get_text(" ", strip=True) if h3 else ""
+        real = _match_image(nm, _pool, _used)  # echte sitefoto op dienstnaam (alt-match)
+        if real:
+            slot["style"] = f"--bg-img: url('{real}')"
+        elif "plat" in nm.lower():
+            slot["style"] = f"--bg-img: url('{_FLAT_IMG}')"
+        else:
+            slot["style"] = f"--bg-img: url('{_STOCK_POOL[_pi % len(_STOCK_POOL)]}')"
+            _pi += 1
+
+    # ── Why-mozaïek: vul met echte (nog ongebruikte) sitefoto's; anders de stock ──
+    _wy_imgs = [it["url"] for it in _pool if it.get("url") and it["url"] not in _used]
+    for k, wslot in enumerate(soup.select('[data-img^="why_team_action"]')):
+        if k < len(_wy_imgs):
+            wslot["style"] = f"--bg-img: url('{_wy_imgs[k]}')"
+            _used.add(_wy_imgs[k])
+
+    # ── Hero-foto: ALTIJD dezelfde bundled foto (consistent, nooit per-lead), via
+    #    het gegarandeerde /demo-assets-pad. Lost meteen de ../assets 404 op. ──
+    hero_img = soup.select_one(".hero-img img")
+    if hero_img is not None:
+        hero_img["src"] = "/demo-assets/dakdekkers/hero-houses.jpg"
+        if hero_img.get("onerror"):
+            hero_img["onerror"] = "this.onerror=null;this.src='/demo-assets/dakdekkers/hero-houses.jpg'"
+
+    # ── Dubbele CTA's weghalen (er staat er al een sticky/nav in beeld) ──
+    for a in soup.select("#why a.btn, .process-head a.btn"):
+        a.decompose()
+
+    # ── Diensten: eigenaar-gerichte hint als we geen echte diensten vonden ──
+    if td.get("_SERVICES_GENERIC"):
+        sh = soup.select_one("#services .services-head")
+        if sh:
+            note = soup.new_tag("div")
+            note["style"] = (
+                "margin-top:14px;display:inline-flex;align-items:center;gap:8px;font-size:12.5px;"
+                "font-weight:600;color:#4928FD;background:#efeaff;border:1px solid #ddd2ff;"
+                "padding:8px 13px;border-radius:999px")
+            note.append("✱ Laten we hier je diensten toevoegen voor een compleet beeld voor je klanten.")
+            sh.append(note)
+
+    # ── Team-CTA: duidelijke label + link naar team ──
+    tcta = soup.select_one(".team-cta a")
+    if tcta:
+        tcta["href"] = "#team"
+
+    # ── Why-items: passende pictogrammen + trim naar het echte aantal ──
+    _ICONS = {
+        "shield": '<path d="M12 2 4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4Z"/><path d="m9 12 2 2 4-4"/>',
+        "badge": '<circle cx="12" cy="9" r="6"/><path d="m8.5 13.5-2 7 5.5-3 5.5 3-2-7"/>',
+        "pin": '<path d="M12 22s-8-7.5-8-13a8 8 0 0 1 16 0c0 5.5-8 13-8 13z"/><circle cx="12" cy="9" r="3"/>',
+        "chat": '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+        "doc": '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/>',
+        "wrench": '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.4 2.4-2-2 2.4-2.4z"/>',
+        "clock": '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+        "check": '<path d="M20 6 9 17l-5-5"/>',
+    }
+    city_l = str(td.get("CITY") or "").lower()
+
+    def _pick_icon(text: str) -> str:
+        t = text.lower()
+        def has(*kw): return any(k in t for k in kw)
+        if has("garant", "waarborg"): return "shield"
+        if has("gecertif", "certif", "erkend", "vca", "keurmerk", "diploma", "gediplom"): return "badge"
+        if has("veilig"): return "shield"
+        if has("lokaal", "local", "regio", "omgeving", "plaatse") or (city_l and city_l in t): return "pin"
+        if has("contact", "persoonlijk", "communicat", "bereikbaar", "klantgericht"): return "chat"
+        if has("offerte", "prijs", "kosten", "transparant", "vrijblijvend", "tarief", "gratis"): return "doc"
+        if has("vakkundig", "vakmanschap", "kwaliteit", "ervaring", "afwerking", "netjes", "zorgvuldig", "expert"): return "wrench"
+        if has("snel", "spoed", "direct", "binnen", "24"): return "clock"
+        return "check"
+
+    for i, item in enumerate(soup.select("#why .why-item"), 1):
+        if not is_set(f"WHY_{i}_TITLE"):
+            item.decompose()
+            continue
+        text = f"{td.get(f'WHY_{i}_TITLE', '')} {td.get(f'WHY_{i}_BODY', '')}"
+        tile = item.select_one(".icon-tile")
+        if tile:
+            svg = soup.new_tag("svg", width="22", height="22", viewBox="0 0 24 24")
+            svg["fill"] = "none"; svg["stroke"] = "currentColor"; svg["stroke-width"] = "2"
+            svg["stroke-linecap"] = "round"; svg["stroke-linejoin"] = "round"
+            svg.append(BeautifulSoup(_ICONS[_pick_icon(text)], "html.parser"))
+            tile.clear()
+            tile.append(svg)
+
+    # ── Projecten: opbouwen uit gescrapete projectkaarten (alleen bij >=2) ──
+    projects = td.get("_PROJECTS") or []
+    psec = soup.find(id="projects")
+    if td.get("SHOW_PROJECTS") is True and projects and psec:
+        plist = psec.select_one(".projects-list")
+        tmpl = plist.select_one(".project") if plist else None
+        if plist and tmpl:
+            built = []
+            for p in projects[:3]:
+                c = _copy(tmpl)
+                _strip_tpl(c)
+                slot = c.select_one(".img-slot")
+                if slot:
+                    slot["style"] = f"--bg-img: url('{p['image']}')"
+                h = c.select_one("h3")
+                if h:
+                    h.string = p.get("title", "")
+                para = c.select_one("p")
+                if para:
+                    para.string = p.get("desc", "")
+                a = c.select_one("a")
+                if a:
+                    a.decompose()
+                built.append(c)
+            plist.clear()
+            for c in built:
+                plist.append(c)
+    else:
+        if psec:
+            psec.decompose()
+        for a in soup.select('.nav-pill a[href="#projects"]'):
+            a.decompose()
+
+    # Artikelen / why
+    if td.get("SHOW_ARTICLES") is not True:
+        a = soup.find(id="articles")
+        if a:
+            a.decompose()
+    if td.get("SHOW_WHY") is not True:
+        w = soup.find(id="why")
+        if w:
+            w.decompose()
+
+    # ── Testimonials: dynamisch opbouwen uit echte reviews (Google + site) ──
+    reviews = td.get("_REVIEWS") or []
+    rsec = soup.find(id="reviews")
+    grid = soup.select_one("#reviews .tm-grid")
+    if not reviews or not grid:
+        if rsec:
+            rsec.decompose()
+    else:
+        tmpl_card = grid.select_one(".tm-card")
+        built = []
+        for rv in reviews:
+            c = _copy(tmpl_card)
+            _strip_tpl(c)
+            body = c.select_one(".body")
+            if body:
+                body.string = rv.get("text", "")
+            stars = c.select_one(".tm-stars")
+            if stars:
+                stars.string = rv.get("stars", "★★★★★")
+            h5 = c.select_one(".who h5")
+            if h5:
+                h5.string = rv.get("author") or "Klant"
+            lbl = c.select_one(".who span")
+            if lbl:
+                lbl.string = rv.get("label", "")
+            built.append(c)
+        grid.clear()
+        for c in built:
+            grid.append(c)
+
+        # Swipe-pijlen weg (er is niks te swipen).
+        for nav in rsec.select(".tm-nav"):
+            nav.decompose()
+
+        # Kleine groene 'live'-regel, net boven de reviews (onder kop + tekst).
+        badge = soup.new_tag("span")
+        badge["style"] = (
+            "display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;"
+            "color:#1a8f4a;margin:0 0 14px")
+        dot = soup.new_tag("i")
+        dot["style"] = ("width:7px;height:7px;border-radius:50%;background:#1fbf5d;display:inline-block;"
+                        "box-shadow:0 0 0 0 rgba(31,191,93,.5)")
+        badge.append(dot)
+        badge.append(" Live in Google, automatisch bijgewerkt")
+        grid.insert_before(badge)
+
+    # Team: nooit verzonnen namen. Lege naam -> alleen de motiverende placeholder
+    for i, member in enumerate(soup.select(".team-grid .member"), 1):
+        if not is_set(f"TEAM_{i}_NAME"):
+            body = member.select_one(".member-body")
+            if body:
+                body.decompose()
+        else:
+            hint = member.select_one(".placeholder-hint")
+            if hint:
+                hint.decompose()
+    if td.get("SHOW_TEAM") is False:
+        t = soup.find(id="team")
+        if t:
+            t.decompose()
+
+    # Nav-telefoon-pill
+    phone = str(td.get("FOOT_PHONE") or "").strip()
+    nav_phone = soup.find(id="nav-phone")
+    if nav_phone:
+        if not phone:
+            nav_phone.decompose()
+        else:
+            nav_phone["href"] = "tel:" + re.sub(r"[^0-9+]", "", phone)
+
+    # Echte 'Open in Google Maps'-link
+    maps = soup.select_one(".location-link")
+    if maps and (is_set("FOOT_ADDRESS") or is_set("COMPANY_NAME")):
+        q = f"{td.get('COMPANY_NAME', '')} {td.get('FOOT_ADDRESS', '')}".strip()
+        maps["href"] = "https://www.google.com/maps/search/?api=1&query=" + quote_plus(q)
+        maps["target"] = "_blank"
+        maps["rel"] = "noopener"
+
+    return str(soup)
+
+
+def _personalize_widget_done(widget: str) -> str:
+    """Herontwerp de bevestigingsstap van de Harv-widget: paarse Harv-bubbel,
+    duidelijke tekst en een heldere CTA naar de kennismaking."""
+    bubble = (
+        '<div style="width:56px;height:56px;margin:6px auto 16px;border-radius:50%;'
+        'background:#4928FD;color:#fff;font-weight:800;font-size:16px;display:flex;'
+        'align-items:center;justify-content:center;letter-spacing:-.3px">Harv</div>'
+    )
+    widget = widget.replace('<div class="harv-check">&#10003;</div>', bubble)
+    widget = widget.replace("Gelukt<span data-fname></span>!", "Bevalt het je tot dusver?")
+    widget = re.sub(
+        r'(<p class="harv-done-p">).*?(</p>)',
+        r"\1Laten we gewoon verder praten.\2",
+        widget, count=1, flags=re.DOTALL,
+    )
+    # Kleine grijze meta-regel leegmaken (de bubbel + tekst dragen de boodschap).
+    widget = re.sub(
+        r'(<span class="harv-meta-line">).*?(</span>)',
+        r"\1\2", widget, count=1, flags=re.DOTALL,
+    )
+    return widget
+
+
+def _harv_float_bubble(booking_url: str) -> str:
+    """Vaste bubbel rechtsonder: 'Presented by Harv Agency' (eigen regel) +
+    duidelijke CTA naar de kennismaking. Blijft ook op mobiel zichtbaar (buiten
+    het telefoonframe, want position:fixed t.o.v. het scherm)."""
+    u = _html_escape(booking_url)
+    return (
+        '<div class="harv-float" style="position:fixed;right:18px;bottom:18px;z-index:99999;'
+        "background:#fff;border:1px solid #ececec;border-radius:16px;"
+        "box-shadow:0 12px 34px rgba(0,0,0,.16);padding:13px 16px;max-width:240px;"
+        'font-family:\'Inter Tight\',system-ui,-apple-system,sans-serif">'
+        '<div style="font-size:13px;color:#555;margin-bottom:10px">'
+        'Presented by <strong style="color:#111">Harv Agency</strong></div>'
+        f'<a href="{u}" target="_blank" rel="noopener" '
+        'style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#fff;'
+        'background:#4928FD;border-radius:999px;padding:9px 15px;text-decoration:none;white-space:nowrap">'
+        "Plan een kennismaking &#8599;</a></div>"
+    )
+
+
+def _wizardize_widget(widget: str) -> str:
+    """Maak de intake uitgebreider ZONDER dat de widget langer/groter wordt:
+    elke vraag wordt een eigen sub-stap (één vraag per scherm). De kaarthoogte
+    blijft compact; navigeren gaat met Volgende/Terug binnen stap 2."""
+    done_marker = '<div class="harv-step harv-done"'
+    i_done = widget.find(done_marker)
+    step2_open = '<div class="harv-step" data-step="2" hidden>'
+    if i_done == -1 or step2_open not in widget:
+        return widget
+    head = widget[:i_done]
+    tail = widget[i_done:]
+    i2 = head.rfind(step2_open)
+    pre2 = head[:i2]
+    step2_block = head[i2:]
+
+    m = re.search(r'<div class="harv-chips">(.*?)</div>', step2_block, re.DOTALL)
+    service_chips = m.group(1) if m else ""
+
+    def chips(opts: list[str]) -> str:
+        return "".join(
+            f'<button type="button" class="harv-chip" data-val="{_html_escape(o)}">{_html_escape(o)}</button>'
+            for o in opts
+        )
+
+    def sub(n: int, question: str, body: str, *, first: bool = False, last: bool = False) -> str:
+        hidden = "" if first else " hidden"
+        back = ('<button type="button" class="harv-btn harv-ghost harv-back">&#8592; Terug</button>'
+                if first else
+                '<button type="button" class="harv-btn harv-ghost harv-subprev">&#8592; Terug</button>')
+        fwd = ('<button type="button" class="harv-btn harv-submit">Versturen</button>' if last
+               else '<button type="button" class="harv-btn harv-subnext">Volgende &#8594;</button>')
+        return (
+            f'<div class="harv-sub" data-sub="{n}"{hidden}>'
+            f'<div class="harv-q">{_html_escape(question)}</div>'
+            f'{body}'
+            f'<div class="harv-row" style="margin-top:14px">{back}{fwd}</div>'
+            f'</div>'
+        )
+
+    toelichting = (
+        '<label class="harv-f">Korte toelichting <span class="harv-opt">(optioneel)</span>'
+        '<textarea name="bericht" rows="3" placeholder="Vertel kort wat je zoekt..."></textarea></label>'
+    )
+
+    new_inner = (
+        sub(1, "Waar kunnen we mee helpen?", f'<div class="harv-chips">{service_chips}</div>', first=True)
+        + sub(2, "Wat voor dak?", f'<div class="harv-chips">{chips(["Plat dak", "Schuin dak", "Weet ik niet"])}</div>')
+        + sub(3, "Geschat oppervlak?", f'<div class="harv-chips">{chips(["< 50 m²", "50 - 100 m²", "> 100 m²", "Onbekend"])}</div>')
+        + sub(4, "Materiaal (indien bekend)?", f'<div class="harv-chips">{chips(["Bitumen", "EPDM", "Dakpannen", "Zink", "Anders"])}</div>')
+        + sub(5, "Wanneer?", f'<div class="harv-chips">{chips(["Spoed", "Binnen een maand", "Oriënterend"])}</div>')
+        + sub(6, "Nog iets dat we moeten weten?", toelichting, last=True)
+    )
+
+    new_step2 = step2_open + new_inner + "</div>\n\n    "
+
+    nav_js = """
+<script>
+(function(){
+  var w = document.querySelector('.harv-w'); if(!w) return;
+  var step2 = w.querySelector('.harv-step[data-step="2"]'); if(!step2) return;
+  var subs = step2.querySelectorAll('.harv-sub'); if(!subs.length) return;
+  var cur = 0;
+  function show(i){ cur = Math.max(0, Math.min(subs.length-1, i)); subs.forEach(function(s,idx){ s.hidden = idx !== cur; }); }
+  step2.addEventListener('click', function(e){
+    var nx = e.target.closest('.harv-subnext');
+    var pv = e.target.closest('.harv-subprev');
+    if(nx){ e.preventDefault(); show(cur+1); }
+    else if(pv){ e.preventDefault(); show(cur-1); }
+  });
+  var nb = w.querySelector('.harv-next');
+  if(nb) nb.addEventListener('click', function(){ setTimeout(function(){ show(0); }, 0); });
+  show(0);
+})();
+</script>
+"""
+    out = pre2 + new_step2 + tail
+    i_sec = out.rfind("</section>")
+    if i_sec != -1:
+        out = out[:i_sec] + nav_js + out[i_sec:]
+    return out
+
+
+def _widget_valid_affordance(widget: str, dark: str) -> str:
+    """Maak de 'Volgende'-knop van stap 1 donker zodra naam + geldig e-mail zijn
+    ingevuld, als duidelijke 'je kunt door'-affordance."""
+    js = (
+        "\n<script>\n(function(){\n"
+        "  var w=document.querySelector('.harv-w'); if(!w) return;\n"
+        "  var s1=w.querySelector('.harv-step[data-step=\"1\"]'); if(!s1) return;\n"
+        "  var nb=s1.querySelector('.harv-next');\n"
+        "  var nm=s1.querySelector('[name=\"naam\"]'), em=s1.querySelector('[name=\"email\"]');\n"
+        "  function ok(){ return nm&&nm.value.trim()&&em&&/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(em.value.trim()); }\n"
+        "  function upd(){ if(nb) nb.style.background = ok() ? '" + dark + "' : ''; }\n"
+        "  s1.addEventListener('input', upd); upd();\n"
+        "})();\n</script>\n"
+    )
+    i = widget.rfind("</section>")
+    return widget[:i] + js + widget[i:] if i != -1 else widget + js
+
+
+def _render_dakdekker_html(
+    html: str,
+    *,
+    data: dict[str, Any],
+    ai_content: dict[str, Any],
+    slug: str,
+    lead_id: str,
+    notion_id: str,
+    regio: Optional[str],
+    stad: Optional[str],
+    brand: str,
+) -> str:
+    """Vul de dakdekker-template: scrape de site voor echte personalisatie
+    (kleuren, werkwijze, reviews, projecten, certificering), patch het
+    template-data JSON-blok en vul de Harv-placeholders."""
+    import harv_kit as hk
+
+    # ── Scrape de live site voor echte, gepersonaliseerde content ──
+    url = data.get("website") or data.get("id") or ""
+    extract: dict[str, Any] = {}
+    colors: tuple[Optional[str], Optional[str]] = (None, None)
+    if url:
+        bundle = fetch_site_bundle(url)
+        colors = detect_brand_colors(bundle.get("html", ""), bundle.get("css", ""))
+        city = _city_from_address(data.get("adres"), data.get("stad") or "")
+        extract = ai_site_extract(
+            bundle.get("text", ""),
+            company=clean_company_name(data.get("bedrijfsnaam")),
+            city=city,
+        )
+        extract["project_cards"] = bundle.get("project_cards", [])
+        extract["service_cards"] = bundle.get("service_cards", [])
+        extract["image_pool"] = bundle.get("image_pool", [])
+        if colors[0]:
+            print(f"  🎨 merkkleur: accent={colors[0]} dark={colors[1]}")
+        print(f"  🧩 site-extract: {len(extract.get('process') or [])} stappen, "
+              f"{len(extract.get('services') or [])} diensten ({len(extract.get('service_cards') or [])} met foto), "
+              f"{len(extract.get('project_cards') or [])} projecten, "
+              f"cert={extract.get('certified')} garantie={extract.get('guarantee')}")
+
+    td = build_dakdekker_template_data(data, ai_content, extract, colors)
+
+    # Embed-JSON zonder interne (_-prefixed) sleutels.
+    embed_td = {k: v for k, v in td.items() if not k.startswith("_")}
+    new_json = json.dumps(embed_td, ensure_ascii=False, indent=2)
+    html, n = re.subn(
+        r'(<script id="template-data" type="application/json">)(.*?)(</script>)',
+        lambda m: m.group(1) + "\n" + new_json + "\n" + m.group(3),
+        html, count=1, flags=re.DOTALL,
+    )
+    if n != 1:
+        raise RuntimeError("dakdekker: template-data JSON-blok niet gevonden in template")
+
+    # Harv-placeholders (widget/presented-by/guard-css). De widget/CTA krijgt de
+    # ECHTE merkkleur van de website (niet het Harv-violet).
+    widget_brand = (colors[0] if colors and colors[0] else brand)
+    kit = hk.kit_placeholders(
+        data, lead_id=lead_id, slug=slug, notion_id=notion_id,
+        sector="dakdekker", regio=regio, stad=stad, brand=widget_brand, ai_content=ai_content,
+    )
+    # Floating bubbel rechtsonder: presented-by + duidelijke CTA (eigen ontwerp).
+    booking_url = hk.build_booking_url(data, notion_id)
+    kit["{{HARV_PRESENTED_BY}}"] = _harv_float_bubble(booking_url)
+
+    # Widget: speelse tagline, herontworpen bevestiging, uitgebreide vragenlijst.
+    widget = kit.get("{{HARV_BOOKING_WIDGET}}", "")
+    if widget:
+        widget = widget.replace("Reageert meestal binnen een uur", "Test mij uit ;)")
+        widget = _personalize_widget_done(widget)
+        widget = _wizardize_widget(widget)
+        widget = _widget_valid_affordance(widget, (colors[1] if colors and colors[1] else "#1a2334"))
+        kit["{{HARV_BOOKING_WIDGET}}"] = widget
+    # Tracking: open-pixel + scroll/cta/duration-beacons (build_tracking_html).
+    if lead_id:
+        kit["{{TRACKING_PIXEL}}"] = build_tracking_html(lead_id, slug)
+    else:
+        kit["{{TRACKING_PIXEL}}"] = ""
+
+    for token, value in kit.items():
+        html = html.replace(token, value or "")
+
+    # Bak echte waarden + sectie-zichtbaarheid server-side in de raw HTML
+    # (geen nep-defaults in de bron; werkt ook zonder JavaScript).
+    html = _bake_dakdekker_dom(html, td)
+    return html
 
 
 def _team_for_caption(team: list[dict[str, Any]], ai_content: dict[str, Any]) -> list[dict[str, Any]]:
@@ -1508,9 +3136,28 @@ def render_demo(
     ai_content = hk.ai_demo_content(
         data, sector=sector_key or "dakdekker", regio=regio, stad=stad, require=require_ai
     )
+    # Kosten van de Haiku content-call live wegschrijven (best effort).
+    log_ai_cost(slug, "haiku_content", ai_content, lead_id=lead_id)
 
     bedrijfsnaam = data.get("bedrijfsnaam") or ai_content.get("display_name") or ""
     primaire_kleur = data.get("primaire_kleur") or hk._detect_brand(data)
+
+    # ── Dakdekker: eigen render-pad (patcht template-data JSON i.p.v. losse tokens) ──
+    if sector_key in DAKDEKKER_SECTORS:
+        html = _render_dakdekker_html(
+            html, data=data, ai_content=ai_content, slug=slug,
+            lead_id=lead_id, notion_id=notion_id, regio=regio, stad=stad,
+            brand=primaire_kleur,
+        )
+        html = _ensure_noindex(html)
+        if write:
+            out_file = PUBLIC_ROOT / "demo" / slug / "index.html"
+            out_file.parent.mkdir(parents=True, exist_ok=True)
+            out_file.write_text(html, encoding="utf-8")
+            print(f"🖼  demo gerenderd → {out_file.relative_to(REPO_ROOT)}")
+            maybe_quality_gate(slug, lead_id=lead_id, real_city=stad)
+        return html
+
     team_in = data.get("team") or []
     team_cards = _team_for_caption(team_in, ai_content)
 
@@ -1523,7 +3170,7 @@ def render_demo(
         "{{TEAM_HTML}}": build_team_html(team_cards),
         "{{BLOG_HTML}}": build_blog_html(data.get("blog_posts") or []),
         "{{WONINGAANBOD_HTML}}": build_woningaanbod_html(data.get("woningaanbod") or [], primaire_kleur),
-        "{{TRACKING_PIXEL}}": build_tracking_pixel_url(lead_id, slug) if lead_id else "",
+        "{{TRACKING_PIXEL}}": build_tracking_html(lead_id, slug) if lead_id else "",
         "{{BEDRIJFSNAAM}}": _html_escape(bedrijfsnaam),
     }
 
@@ -1543,11 +3190,13 @@ def render_demo(
     for token, value in {**base, **kit}.items():
         html = html.replace(token, value or "")
 
+    html = _ensure_noindex(html)
     if write:
         out_file = PUBLIC_ROOT / "demo" / slug / "index.html"
         out_file.parent.mkdir(parents=True, exist_ok=True)
         out_file.write_text(html, encoding="utf-8")
         print(f"🖼  demo gerenderd → {out_file.relative_to(REPO_ROOT)}")
+        maybe_quality_gate(slug, lead_id=lead_id, real_city=stad)
 
     return html
 
@@ -1674,6 +3323,68 @@ def _import_harv_db(scraper_dir: Path = HARV_SCRAPER_DIR):
     if str(scraper_dir) not in sys.path:
         sys.path.insert(0, str(scraper_dir))
     return importlib.import_module("db")
+
+
+def log_ai_cost(
+    slug: str,
+    step: str,
+    ai_content: dict[str, Any],
+    *,
+    lead_id: str = "",
+    run_id: str = "",
+) -> None:
+    """Log de AI-kosten van één call naar de ai_costs-tabel (best effort).
+
+    Leest `_cost_eur`, `_model` en `_tokens` uit het ai_content-dict dat
+    harv_kit teruggeeft. Faalt dit (geen db, geen kosten), dan slaan we het
+    stil over: kostenlogging mag de demo-generatie nooit breken.
+    """
+    cost = float(ai_content.get("_cost_eur") or 0.0)
+    if cost <= 0:
+        return
+    toks = ai_content.get("_tokens") or {}
+    try:
+        db = _import_harv_db()
+        db.add_ai_cost(
+            slug=slug,
+            step=step,
+            model=str(ai_content.get("_model") or "haiku"),
+            cost_eur=cost,
+            tok_in=int(toks.get("in") or 0),
+            tok_out=int(toks.get("out") or 0),
+            img_tokens=int(ai_content.get("_img_tokens") or 0),
+            lead_id=lead_id or None,
+            run_id=run_id or None,
+        )
+    except Exception as exc:  # noqa: BLE001 — logging mag nooit breken
+        print(f"  ⚠ kostenlog overgeslagen ({step}): {exc}")
+
+
+def maybe_quality_gate(slug: str, *, lead_id: str = "", real_city: Optional[str] = None) -> Optional[dict]:
+    """Draai de kwaliteitstrechter (gate + sign-off) als HARV_QUALITY_GATE=1.
+
+    Default UIT zodat bestaand gedrag niet verandert tot Playwright + de key op
+    de server staan. Bij 'human_review' wordt de lead geflagd zodat hij niet
+    automatisch gepusht wordt. Best effort: faalt dit, dan alleen een waarschuwing.
+    """
+    if os.environ.get("HARV_QUALITY_GATE", "") not in ("1", "true", "yes"):
+        return None
+    try:
+        import quality_pipeline as qp
+        res = qp.run_quality(slug=slug, public_root=PUBLIC_ROOT, lead_id=lead_id, real_city=real_city)
+        emoji = "✅" if res["decision"] == "ship" else "🛑"
+        print(f"  {emoji} kwaliteit: {res['decision']} — {res['reason']} "
+              f"(€{res.get('spent_eur', 0):.4f} besteed)")
+        if res["decision"] != "ship" and lead_id:
+            try:
+                db = _import_harv_db()
+                db.add_lead_flag(lead_id, "quality_review")
+            except Exception as exc:  # noqa: BLE001
+                print(f"  ⚠ kon lead niet flaggen voor review: {exc}")
+        return res
+    except Exception as exc:  # noqa: BLE001 — kwaliteitsgate mag generatie niet breken
+        print(f"  ⚠ kwaliteitsgate overgeslagen: {exc}")
+        return None
 
 
 def _notion_patch_demo_link(
@@ -1910,6 +3621,99 @@ def _summary(data: dict[str, Any]) -> None:
     print(f"  founded={extra['founded_year']}  certs={len(extra['certifications'])}")
 
 
+def _ensure_b_shared() -> list[Path]:
+    """Template B (helder) verwijst naar gedeelde assets (`../assets/…`) en de
+    React-widget (`../quote-widget.jsx`), die gedeeld in `public/demo/` staan.
+    Kopieer ze (idempotent) uit de gevendorde bron `templates/_b-shared/` zodat
+    elke B-demo ze live heeft. Retourneert de paden om mee te committen."""
+    import shutil
+    src = TEMPLATES_ROOT / "_b-shared"
+    demo_root = PUBLIC_ROOT / "demo"
+    touched: list[Path] = []
+    if (src / "quote-widget.jsx").exists():
+        dst = demo_root / "quote-widget.jsx"
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(src / "quote-widget.jsx", dst)
+        touched.append(dst)
+    asset_src = src / "assets"
+    if asset_src.is_dir():
+        asset_dst = demo_root / "assets"
+        asset_dst.mkdir(parents=True, exist_ok=True)
+        for img in asset_src.iterdir():
+            if img.is_file():
+                shutil.copyfile(img, asset_dst / img.name)
+        touched.append(asset_dst)
+    return touched
+
+
+def _main_dakdekker(args: argparse.Namespace, slug: str) -> int:
+    """CLI-pad voor dakdekkers: render uit de VERRIJKTE lead in de DB (echte
+    rating/reviews/adres/telefoon/beschrijving) i.p.v. een verse scrape, en
+    push + verify. Dit is het pad dat batch_demo.py op volume aanroept."""
+    try:
+        db = _import_harv_db()
+    except Exception as exc:  # noqa: BLE001
+        print(f"⚠ kan harv-scraper db niet laden: {exc}", file=sys.stderr)
+        return 1
+
+    lead = None
+    if args.notion_page_id:
+        lead = db.get_lead_by_notion_page_id(args.notion_page_id)
+    if lead is None:
+        lead = db.get_lead_by_id(args.url)
+    if lead is None:
+        print(f"⚠ geen lead in DB voor url={args.url} / notion={args.notion_page_id}", file=sys.stderr)
+        return 1
+
+    notion_id = args.notion_page_id or lead.get("notion_page_id") or ""
+    data = lead_to_demo_data(lead)
+    tpl_variant = getattr(args, "template", "a") or "a"
+    tpl_path = TEMPLATES_ROOT / "Roofer" / f"dakdekkers-{tpl_variant}.html"
+    print(f"🏗  render dakdekker-demo  slug={slug}  template={tpl_variant}  bedrijf={lead.get('bedrijfsnaam','')[:40]}")
+    try:
+        render_demo(
+            slug=slug, sector="dakdekkers", data=data,
+            lead_id=lead.get("id") or args.url, notion_id=notion_id,
+            regio=lead.get("regio"), stad=lead.get("stad"),
+            write=True, require_ai=not args.no_ai,
+            template_path=tpl_path,
+        )
+    except Exception as exc:  # noqa: BLE001 — AIContentError of render-fout: lead overslaan
+        print(f"⚠ render mislukt voor {slug}: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 1
+
+    target = PUBLIC_ROOT / "demo" / slug / "index.html"
+    print(f"💾 demo gerenderd → {target.relative_to(REPO_ROOT)}")
+
+    # Template B leunt op gedeelde assets + widget in public/demo/ — zorg dat ze er staan.
+    shared_paths = _ensure_b_shared() if tpl_variant == "b" else []
+    if shared_paths:
+        print(f"📦 gedeelde B-assets/widget klaar ({len(shared_paths)} paden)")
+
+    if args.no_push:
+        return 0
+    try:
+        for pth in shared_paths:
+            subprocess.run(["git", "-C", str(REPO_ROOT), "add", str(pth)], check=False)
+        git_commit_push(slug, target)
+    except subprocess.CalledProcessError as exc:
+        print(f"⚠ git stap mislukt: {exc}", file=sys.stderr)
+        return 1
+
+    if args.skip_verify:
+        return 0
+    if verify_deploy(slug):
+        demo_url = f"{DEPLOY_BASE_URL}/demo/{slug}/"
+        status = update_lead_after_deploy(notion_id or None, demo_url)
+        if status["sqlite_updated"]:
+            print(f"✅ SQLite fase → demo_verstuurd  (lead_id={status['lead_id']})")
+        if status["notion_updated"]:
+            print(f"✅ Notion Demo-link bijgewerkt op pagina {notion_id[:8]}…")
+        for err in status["errors"]:
+            print(f"⚠ {err}")
+    return 0
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="Demo data scraper")
     parser.add_argument("--url", required=True, help="Lead-URL (volledige URL)")
@@ -1938,9 +3742,25 @@ def main(argv: Optional[list[str]] = None) -> int:
         action="store_true",
         help="Gebruik de oude nested scrape_site_data ipv de Fase-2 scrape_full_site_data.",
     )
+    parser.add_argument(
+        "--no-ai",
+        action="store_true",
+        help="Render zonder verplichte AI-content (alleen voor previews/tests).",
+    )
+    parser.add_argument(
+        "--template",
+        choices=["a", "b"],
+        default="a",
+        help="Template-variant voor dakdekkers: 'a' (origineel) of 'b' (helder). Default a.",
+    )
     args = parser.parse_args(argv)
 
     slug = slugify(args.slug) if args.slug else slug_from_url(args.url)
+
+    # Dakdekkers renderen uit de verrijkte DB-lead (echte data, no-fake-data).
+    if (args.sector or "").strip().lower() in DAKDEKKER_SECTORS:
+        return _main_dakdekker(args, slug)
+
     print(f"🔎 scrape {args.url}  slug={slug}")
     try:
         if args.legacy:
