@@ -83,7 +83,7 @@ Volledige `scrape_full_site_data(url, sector)` met flat JSON output:
   `NOTION_TOKEN` ontbreekt in `.env`
 
 ## Template variabelen overzicht
-Templates leven in `templates/makelaardij-{a,b}.html`. Onderstaande
+(Historisch: dit beschrijft de verwijderde makelaardij-templates.) Onderstaande
 placeholders worden ingevuld door de bijbehorende `build_*` functies.
 
 | Placeholder | Builder / bron | Aanwezig in a | Aanwezig in b |
@@ -101,7 +101,7 @@ broken `<img>` tags: builders laten `src` weg als URL leeg is.
 
 ## Bestanden
 - **Script:** `generate_demo.py`
-- **Templates:** `templates/makelaardij-a.html`, `templates/makelaardij-b.html`
+- **Templates:** `templates/Roofer/dakdekkers-{a,b,c}.html` (+ gedeelde assets in `templates/_b-shared/`)
 - **Data (per lead):** `data/<slug>/data.json` (in git)
 - **Demo output:** `public/demo/<slug>/index.html` (nog handmatig te renderen)
 
@@ -112,6 +112,8 @@ NOTION_TOKEN=secret_…
 Optioneel: `NOTION_API_KEY` werkt als fallback voor `NOTION_TOKEN`.
 
 ## Sectoren met klare templates
-- `makelaardij` ✅ (a/b varianten)
-- `tandartsen` / `accountants` / `bouwbedrijven` — templates nog niet
-  gebouwd; `NAV_FALLBACKS` heeft alleen `makelaardij`.
+- `dakdekkers` ✅ (`templates/Roofer/dakdekkers-{a,b,c}.html`; c = default,
+  b = "helder", a = uitgefaseerd)
+- `makelaardij` — templates verwijderd; sector rendert niet meer.
+
+Andere sectoren worden later bepaald en toegevoegd.
