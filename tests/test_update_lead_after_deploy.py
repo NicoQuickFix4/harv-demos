@@ -32,6 +32,8 @@ from generate_demo import update_lead_after_deploy  # noqa: E402
 
 TEST_NOTION_PAGE_ID = "abcd1234-5678-90ab-cdef-1234567890ab"
 TEST_WEBSITE = "https://testlead-makelaar.example"
+# De db normaliseert het lead-id naar het root-domein; sleutel dus dáárop.
+TEST_LEAD_ID = db._extract_root_domain(TEST_WEBSITE)
 TEST_DEMO_URL = "https://harv-demos.vercel.app/demo/testlead-makelaar/"
 
 
@@ -45,13 +47,15 @@ class UpdateLeadAfterDeployIntegrationTest(unittest.TestCase):
             {
                 "website": TEST_WEBSITE,
                 "bedrijfsnaam": "Testlead Makelaar B.V.",
+                # Harde db-regel: een lead zonder e-mail wordt nooit toegevoegd.
+                "email": "test@testlead-makelaar.example",
                 "sector": "makelaardij",
                 "stad": "Utrecht",
                 "fase": "synced_to_notion",
             },
             db_path=self.db_path,
         )
-        db.set_notion_page_id(TEST_WEBSITE, TEST_NOTION_PAGE_ID, db_path=self.db_path)
+        db.set_notion_page_id(TEST_LEAD_ID, TEST_NOTION_PAGE_ID, db_path=self.db_path)
 
     def tearDown(self) -> None:
         self.tmpdir.cleanup()
@@ -73,7 +77,7 @@ class UpdateLeadAfterDeployIntegrationTest(unittest.TestCase):
             )
 
         # 1. SQLite-fase moet bijgewerkt zijn
-        lead = db.get_lead_by_id(TEST_WEBSITE, db_path=self.db_path)
+        lead = db.get_lead_by_id(TEST_LEAD_ID, db_path=self.db_path)
         self.assertIsNotNone(lead, "testlead niet meer terug te vinden")
         self.assertEqual(lead["fase"], "demo_verstuurd")
 
@@ -91,7 +95,7 @@ class UpdateLeadAfterDeployIntegrationTest(unittest.TestCase):
         self.assertTrue(status["lead_found"], "lead had gevonden moeten worden")
         self.assertTrue(status["sqlite_updated"], "sqlite_updated had True moeten zijn")
         self.assertTrue(status["notion_updated"], "notion_updated had True moeten zijn")
-        self.assertEqual(status["lead_id"], TEST_WEBSITE)
+        self.assertEqual(status["lead_id"], TEST_LEAD_ID)
         self.assertEqual(status["errors"], [])
 
     def test_notion_faal_blokkeert_sqlite_update_niet(self) -> None:
@@ -107,7 +111,7 @@ class UpdateLeadAfterDeployIntegrationTest(unittest.TestCase):
                 notion_token="fake-token-for-test",
             )
 
-        lead = db.get_lead_by_id(TEST_WEBSITE, db_path=self.db_path)
+        lead = db.get_lead_by_id(TEST_LEAD_ID, db_path=self.db_path)
         self.assertEqual(lead["fase"], "demo_verstuurd", "SQLite moet onafhankelijk van Notion bijgewerkt zijn")
         self.assertTrue(status["sqlite_updated"])
         self.assertFalse(status["notion_updated"])
