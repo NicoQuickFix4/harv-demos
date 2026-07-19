@@ -86,6 +86,33 @@
   --z-menu: 400;
 }
 
+/* ── Donkere variant (RULES 3b): generator zet body.harv-dark wanneer de
+   eigen site van de lead donker is (of via --theme dark). Alleen de neutrale
+   ramp + tints kantelen; de merk-/amber-rollen blijven staan. ── */
+body.harv-dark {
+  --bg:        oklch(0.17 0.018 257);
+  --surface:   oklch(0.21 0.022 257);
+  --surface-2: oklch(0.25 0.026 257);
+  --line:      oklch(0.33 0.028 257);
+  --line-soft: oklch(0.28 0.024 257);
+  --ink:       oklch(0.96 0.008 250);
+  --ink-soft:  oklch(0.83 0.015 252);
+  --ink-faint: oklch(0.70 0.015 252);
+  --blue-tint:   oklch(0.27 0.045 252);
+  --blue-tint-2: oklch(0.32 0.055 252);
+  --amber-tint:  oklch(0.28 0.05 70);
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.30), 0 2px 6px oklch(0 0 0 / 0.30);
+  --shadow-md: 0 4px 12px oklch(0 0 0 / 0.35), 0 10px 28px oklch(0 0 0 / 0.35);
+  --shadow-lg: 0 12px 30px oklch(0 0 0 / 0.45), 0 24px 56px oklch(0 0 0 / 0.40);
+}
+/* De header heeft een eigen (hardcoded) glas-achtergrond — die moet mee
+   kantelen, anders blijft de navbar wit op een donkere site. */
+body.harv-dark .header { background: oklch(0.17 0.018 257 / 0.86); }
+body.harv-dark .header.scrolled { border-bottom-color: var(--line); }
+/* Hamburger + onderste mobiele balk kantelen mee (hardcoded lichte tinten). */
+body.harv-dark .burger { color: var(--ink); background: var(--surface); border-color: var(--line); }
+body.harv-dark .mobile-bar { background: oklch(0.17 0.018 257 / 0.94); border-top-color: var(--line); }
+
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
@@ -203,22 +230,28 @@ button { font-family: inherit; cursor: pointer; }
 .brand small { display: block; font-size: 0.66rem; font-weight: 600; color: var(--ink-faint); letter-spacing: 0.01em; margin-top: 1px; }
 .brand-txt { line-height: 1.05; }
 
-.nav { margin-left: auto; display: flex; align-items: center; gap: 0.35rem; }
+/* Nav links uitgelijnd naast het logo (besluit 2026-06-11); telefoon + CTA
+   blijven rechts via margin-left:auto op .header-cta. */
+.nav { margin-left: 1.1rem; flex: 1; display: flex; align-items: center; gap: 0.35rem; }
 .nav a.navlink {
   padding: 0.5rem 0.78rem; border-radius: 8px; font-weight: 600; font-size: 0.96rem; color: var(--ink-soft);
   transition: color 0.16s var(--ease), background 0.16s var(--ease);
+  white-space: nowrap; /* RULES: nav-items nooit op twee regels */
 }
 .nav a.navlink:hover { color: var(--ink); background: var(--surface-2); }
-.header-cta { display: flex; align-items: center; gap: 0.6rem; margin-left: 0.4rem; }
+.header-cta { display: flex; align-items: center; gap: 0.6rem; margin-left: auto; }
 .header-phone {
   display: inline-flex; align-items: center; gap: 0.45rem;
   font-weight: 700; color: var(--blue-strong); font-size: 0.98rem;
-  padding: 0.5rem 0.7rem; border-radius: 8px;
+  padding: 0.5rem 0.85rem; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface);
+  white-space: nowrap; /* RULES: telefoonnummer nooit op twee regels */
 }
 .header-phone:hover { background: var(--blue-tint); }
 .header-phone svg { width: 1.05em; height: 1.05em; }
-.header-quote { display: none; }
-.header.scrolled .header-quote { display: inline-flex; }
+/* Offerte-CTA staat ALTIJD rechtsboven (besluit 2026-06-11), niet pas na
+   scrollen — het is het #1 conversie-element. */
+.header-quote { display: inline-flex; }
 
 .burger {
   display: none; margin-left: auto;
@@ -407,15 +440,18 @@ button { font-family: inherit; cursor: pointer; }
 .svc-a { grid-area: a; }
 .svc-b { grid-area: b; }
 .svc-compact { display: grid; grid-template-columns: clamp(150px, 38%, 220px) 1fr; align-items: stretch; }
-.svc-compact .svc-img { aspect-ratio: auto; min-height: 168px; }
-.svc-compact .svc-body { padding: 1.1rem 1.2rem; }
+/* Beeld vult de LINKER kolom volledig (breedte = kolom, hoogte = kaart) en wordt
+   met object-fit:cover bijgesneden. GEEN aspect-ratio: die dwong de breedte =
+   hoogte×16/9 → beeld liep over de tekst-kolom heen (uitlijnings-bug). */
+.svc-compact .svc-img { height: 100%; min-height: 168px; }
+.svc-compact .svc-body { padding: 1.1rem 1.2rem; display: flex; flex-direction: column; justify-content: center; }
 .svc-compact h3 { font-size: 1.1rem; }
 .svc-compact .svc-desc { font-size: 0.9rem; color: var(--ink-soft); margin-top: 0.3rem; line-height: 1.45; }
 
 /* wide service */
 .svc-wide { grid-area: wide; display: grid; grid-template-columns: 1.5fr 1fr; gap: 1rem; align-items: stretch; }
 .svc-wide .svc-body { padding: clamp(1.2rem, 2.4vw, 1.7rem); }
-.svc-wide .svc-img { align-self: stretch; min-height: 200px; }
+.svc-wide .svc-img { align-self: stretch; min-height: 200px; max-height: 280px; }
 .svc-wide h3 { font-size: 1.3rem; }
 .svc-wide .svc-desc { font-size: 0.98rem; color: var(--ink-soft); margin-top: 0.4rem; max-width: 48ch; }
 
@@ -490,14 +526,35 @@ button { font-family: inherit; cursor: pointer; }
   border-left: 1px solid oklch(1 0 0 / 0.16);
 }
 .stat:first-child { padding-left: 0; border-left: none; }
-.stat .num { font-size: clamp(2rem, 1.5rem + 2.2vw, 3rem); font-weight: 800; letter-spacing: -0.04em; line-height: 1; color: var(--on-blue); }
+.stat .num { font-size: clamp(2rem, 1.5rem + 2.2vw, 3rem); font-weight: 800; letter-spacing: -0.04em; line-height: 1; color: var(--on-blue); font-variant-numeric: tabular-nums; }
 .stat .num .suf { color: oklch(0.80 0.12 245); }
 .stat .lbl { font-size: 0.86rem; color: oklch(0.84 0.03 250); margin-top: 0.55rem; font-weight: 600; line-height: 1.35; }
+/* Mobiel/telefoonframe (besluit 2026-06-11): de cijfers staan gecentreerd
+   over de VOLLE paginabreedte — het middelste cijfer letterlijk in het
+   midden — met een scheidingslijntje tussen álle cijfers. De lead-tekst
+   erboven blijft links. Vast in de template, niet generator-afhankelijk. */
 @media (max-width: 880px) {
   .stats-inner { grid-template-columns: 1fr; gap: 1.8rem; }
-  .stat-row { grid-template-columns: repeat(2, 1fr); gap: 1.4rem 0; }
-  .stat { border-left: none; padding-left: 0; }
-  .stat:nth-child(even) { padding-left: clamp(1rem, 4vw, 1.8rem); border-left: 1px solid oklch(1 0 0 / 0.16); }
+  .stat-row { grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; gap: 0; }
+  .stat {
+    border-left: none; padding: 4px 6px;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: flex-start; text-align: center;
+  }
+  .stat:nth-child(even) { padding-left: 6px; border-left: none; }
+  .stat + .stat { border-left: 1px solid oklch(1 0 0 / 0.16); }
+}
+.is-framed .stats-inner, body.preview-mobile .stats-inner { grid-template-columns: 1fr !important; gap: 1.8rem; }
+.is-framed .stat-row, body.preview-mobile .stat-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important; width: 100%; gap: 0;
+}
+.is-framed .stat, body.preview-mobile .stat {
+  border-left: none !important; padding: 4px 6px;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: flex-start; text-align: center;
+}
+.is-framed .stat + .stat, body.preview-mobile .stat + .stat {
+  border-left: 1px solid oklch(1 0 0 / 0.16) !important;
 }
 
 /* ============================== Projecten ============================== */
@@ -518,16 +575,24 @@ button { font-family: inherit; cursor: pointer; }
 
 /* ============================== Reviews + team ============================== */
 .rev-team { background: var(--surface); border-block: 1px solid var(--line-soft); }
-.reviews-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-.review { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.4rem 1.4rem 1.3rem; display: flex; flex-direction: column; }
+/* Compacter: kleinere gap + lichte bleed in de gutter zodat de kaarten breder en
+   platter ogen en mooier op elkaar aansluiten. */
+.reviews-grid { display: grid; grid-template-columns: repeat(var(--tm-cols, 3), minmax(0, 1fr)); gap: 0.7rem; margin-inline: -0.5rem; }
+.review { margin: 0; /* reset de figure-default (1em 40px) die de kaarten smal hield */ background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.05rem 1.2rem 1rem; display: flex; flex-direction: column; }
 .review .stars { color: var(--star); letter-spacing: 0.08em; font-size: 0.95rem; }
-.review blockquote { margin: 0.7rem 0 0; font-size: 1.0rem; line-height: 1.55; color: var(--ink); font-weight: 500; }
-.review figcaption { margin-top: auto; padding-top: 1rem; font-size: 0.88rem; color: var(--ink-faint); font-weight: 600; }
+.review blockquote { margin: 0.55rem 0 0; font-size: 1.0rem; line-height: 1.5; color: var(--ink); font-weight: 500; }
+.review figcaption { margin-top: auto; padding-top: 0.75rem; font-size: 0.88rem; color: var(--ink-faint); font-weight: 600; }
 @media (max-width: 860px) { .reviews-grid { grid-template-columns: 1fr; } }
 /* In de mobiele preview (binnen het telefoon-iframe) reviews altijd netjes onder elkaar. */
 .is-framed .reviews-grid { grid-template-columns: 1fr !important; }
-/* Mobiel: review-kaarten iets breder/platter (minder padding → tekst gebruikt meer breedte). */
-@media (max-width: 760px) { .review { padding: 1rem 1.1rem 0.95rem; } }
+/* Mobiel: review-kaarten breder én platter — bleeden iets in de gutter, minder padding,
+   compactere tussenruimte (zodat ze net als op desktop wijd en laag ogen). */
+@media (max-width: 760px) {
+  .rev-team .reviews-grid { gap: 0.7rem; margin-inline: -0.6rem; }
+  .review { padding: 0.85rem 1rem 0.8rem; }
+  .review blockquote { margin-top: 0.5rem; line-height: 1.45; }
+  .review figcaption { padding-top: 0.7rem; }
+}
 
 .team-block { margin-top: clamp(2.4rem, 5vw, 3.4rem); }
 .team-head { display: flex; align-items: baseline; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1.3rem; }
@@ -620,34 +685,166 @@ button { font-family: inherit; cursor: pointer; }
 }
 .form-success.show { display: block; animation: pop 0.5s var(--ease) both; }
 @keyframes pop { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .form-success.show { animation: none; } }
-.fs-check { width: 60px; height: 60px; margin: 0 auto 1rem; border-radius: 50%; background: oklch(0.62 0.13 155 / 0.14); display: grid; place-items: center; color: var(--ok); }
-.fs-check svg { width: 32px; height: 32px; }
+@media (prefers-reduced-motion: reduce) { .form-success.show { animation: none; } .fs-check, .fs-check::after { animation: none !important; } }
+.fs-check {
+  width: 64px; height: 64px; margin: 0 auto 1rem; border-radius: 50%;
+  background: var(--ok); color: #fff;
+  display: grid; place-items: center; position: relative;
+  box-shadow: 0 10px 26px -8px oklch(0.62 0.16 155 / 0.55);
+  animation: fsPop .55s cubic-bezier(.22,1,.36,1) both;
+}
+.fs-check::after {
+  content: ""; position: absolute; inset: -2px; border-radius: 50%;
+  border: 2px solid var(--ok); animation: fsRing 1.9s ease-out infinite;
+}
+.fs-check svg { width: 32px; height: 32px; position: relative; z-index: 1; }
+@keyframes fsPop { 0% { transform: scale(0); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
+@keyframes fsRing { 0% { transform: scale(1); opacity: .55; } 100% { transform: scale(1.55); opacity: 0; } }
 .form-success h3 { font-size: 1.3rem; }
 .form-success p { color: var(--ink-soft); margin-top: 0.6rem; }
 .form-success .again { margin-top: 1.1rem; background: none; border: none; color: var(--blue-strong); font-weight: 700; text-decoration: underline; }
 
-/* Harv Agency CTA (own branding, visually separate from the roofer) */
+/* ===== Harv Agency CTA — nieuwe branding (ink #101314 + giftgroen #77fb38), los van de dakdekker ===== */
 .harv-cta {
   margin-top: 1.5rem; text-align: left;
-  background: #4928FD; color: #fff;
+  background: #fff; color: #101314;
+  border: 1px solid rgba(16,19,20,.12);
   border-radius: 14px; padding: 1.1rem 1.2rem;
 }
 .harv-cta .harv-kicker {
-  display: block; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.02em;
-  color: #fff; opacity: 0.85; margin: 0;
+  display: block; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.01em;
+  color: #5c625e; margin: 0;
 }
-.harv-cta h4 { color: #fff; font-size: 1.15rem; letter-spacing: -0.02em; margin-top: 0.5rem; }
-.harv-cta p { color: #fff; opacity: 0.9; font-size: 0.92rem; margin-top: 0.3rem; line-height: 1.45; }
-.harv-cta .harv-btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
-  margin-top: 1rem; padding: 0.7rem 1.1rem;
-  background: #fff; color: #4928FD; font-weight: 700; font-size: 0.96rem;
-  border-radius: 10px; line-height: 1.1;
-  transition: transform 0.16s var(--ease), box-shadow 0.2s var(--ease);
+.harv-cta h4 { color: #101314; font-size: 1.12rem; letter-spacing: -0.02em; margin-top: 0.2rem; }
+.harv-cta p { color: #5c625e; font-size: 0.9rem; margin-top: 0.22rem; line-height: 1.4; }
+
+/* Gedeelde "Plan een gesprek"-knop (form-einde + mini): compacte link-stijl met bewegende gifgroene onderstreping */
+.harv-cta .harv-btn, .hfc-btn {
+  position: relative; display: inline-flex; align-items: center; gap: 0.35rem;
+  background: none; border: 0; cursor: pointer; padding: 2px 0 6px;
+  color: #101314; font-weight: 700; line-height: 1.2; text-decoration: none;
 }
-.harv-cta .harv-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px oklch(0.30 0.18 285 / 0.4); }
-@media (prefers-reduced-motion: reduce) { .harv-cta .harv-btn:hover { transform: none; } }
+.harv-cta .harv-btn { margin-top: 0.7rem; font-size: 14px; }   /* exact gelijk aan de mini rechtsonder */
+.harv-cta .harv-btn svg, .hfc-btn svg { width: 1.05em; height: 1.05em; flex: none; color: #77fb38; }  /* gifgroen pijltje */
+.harv-cta .harv-btn svg path, .hfc-btn svg path { stroke-width: 3; }   /* dikker pijltje */
+/* Altijd-zichtbare gifgroene onderstreping mét beweging (lichte shimmer schuift erover) */
+.harv-cta .harv-btn::after, .hfc-btn::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; border-radius: 2px;
+  background: linear-gradient(90deg, #77fb38 0%, #77fb38 38%, #d6ffbe 50%, #77fb38 62%, #77fb38 100%);
+  background-size: 220% 100%;
+  animation: hfcLine 2.2s linear infinite;
+}
+@keyframes hfcLine { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+
+/* Ronddraaiende groene rand om een 'bubbel'/kaart — beweging die de aandacht trekt */
+@property --hb-ang { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.harv-ring { position: relative; }
+.harv-ring::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 2.5px;
+  background: conic-gradient(from var(--hb-ang), transparent 0deg 248deg, #2fbf1f 300deg, #77fb38 332deg, transparent 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
+  animation: hbSpin 3s linear infinite; pointer-events: none;
+}
+@keyframes hbSpin { to { --hb-ang: 360deg; } }
+
+/* ===== Harv: vaste mini-bubbel rechtsonder + conversie-modal (3 stijl-varianten via ?popup=1|2|3) ===== */
+/* Mini-bubbel: altijd zichtbaar, blijft altijd rechtsonder; klikken heropent de modal */
+/* Mini-bubbel EXACT gelijk aan Template C (zelfde markup + waarden): 12,5px basis,
+   sub 11,5px, link 12,5px/800 met statische gifgroene onderstreping + groene →. */
+.harv-mini {
+  position: fixed; right: 20px; bottom: 20px; z-index: 10070; cursor: pointer;
+  display: flex; align-items: center; gap: 10px; text-decoration: none;
+  max-width: 340px; padding: 10px 14px 10px 10px;
+  background: #fff; color: #101314; border-radius: 14px;
+  box-shadow: 0 12px 34px rgba(0,0,0,.45);
+  font-size: 12.5px; line-height: 1.4;
+  animation: hmIn .6s cubic-bezier(.16,1,.3,1) both;
+}
+.harv-mini:hover { box-shadow: 0 14px 38px rgba(0,0,0,.5); }
+.harv-mini img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; flex: none; }
+.harv-mini .hm-sub { color: #5c625e; font-size: 11.5px; display: block; }
+.harv-mini .lnk { color: #101314; font-weight: 800; text-decoration: underline; text-decoration-color: #77fb38; text-decoration-thickness: 2.5px; text-underline-offset: 3px; }
+.harv-mini .lnk .arr { color: #77fb38; }
+/* Hoofdje van Nicolas — maakt elke Harv-message persoonlijk. */
+.harv-face { width: 38px; height: 38px; border-radius: 999px; object-fit: cover; flex: none; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(16,19,20,.22); }
+.harv-mini .harv-face { width: 36px; height: 36px; }
+.harv-who { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; text-align: left; }
+.harv-who .hw-name { display: block; font-weight: 700; color: #101314; font-size: 14px; line-height: 1.25; }
+.harv-who .hw-sub { display: block; font-size: 12px; color: #5c625e; }
+.harv-pop[data-variant="2"] .hw-name { color: #fff; }
+.harv-pop[data-variant="2"] .hw-sub { color: #b9bfba; }
+.harv-mini.is-hidden { opacity: 0; transform: translateY(14px) scale(.94); pointer-events: none; transition: opacity .3s var(--ease), transform .3s var(--ease); }
+@keyframes hmIn { from { opacity: 0; transform: translateY(16px) scale(.95); } to { opacity: 1; transform: none; } }
+.is-framed .harv-mini { display: none !important; }   /* niet ín de telefoon-preview; de top-level mini blijft rechtsonder staan */
+@media (max-width: 760px) { .harv-mini { right: 12px; bottom: 84px; } }   /* op mobiel zichtbaar, boven de sticky-balk */
+
+/* Modal (altijd gecentreerd; klapt open vanuit / dicht naar de hoek) */
+.harv-pop { position: fixed; inset: 0; z-index: 10090; display: none; }
+.harv-pop.is-open, .harv-pop.is-closing { display: block; }
+.harv-pop-backdrop { position: absolute; inset: 0; background: rgba(10,13,12,.55); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); opacity: 0; transition: opacity .42s var(--ease); }
+.harv-pop.is-open .harv-pop-backdrop { opacity: 1; }
+.harv-pop.is-closing .harv-pop-backdrop { opacity: 0; }
+.harv-pop-card {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  width: min(440px, calc(100vw - 32px)); padding: 30px 30px 28px; overflow: hidden;
+  background: #fff; color: #101314;
+  border: 2px solid #2fbf1f;                 /* groen randje om de hele pop-up */
+  border-radius: 20px; box-shadow: 0 36px 80px -26px rgba(10,13,12,.65);
+}
+.harv-pop.is-open .harv-pop-card { animation: hpExpand .5s cubic-bezier(.16,1,.3,1) both; }
+.harv-pop.is-closing .harv-pop-card { animation: hpCollapse .42s cubic-bezier(.6,0,.85,.25) both; }
+@keyframes hpExpand { from { opacity: .25; transform: translate(calc(-50% + 34vw), calc(-50% + 32vh)) scale(.3); } to { opacity: 1; transform: translate(-50%,-50%) scale(1); } }
+@keyframes hpCollapse { from { opacity: 1; transform: translate(-50%,-50%) scale(1); } to { opacity: 0; transform: translate(calc(-50% + 34vw), calc(-50% + 32vh)) scale(.3); } }
+.harv-pop-x { position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; z-index: 3; display: grid; place-items: center; border: 0; border-radius: 999px; background: rgba(16,19,20,.06); color: #5c625e; cursor: pointer; }
+.harv-pop-x:hover { background: rgba(16,19,20,.12); color: #101314; }
+.harv-pop-x svg { width: 16px; height: 16px; }
+.harv-pop-kicker { margin: 0 0 8px; font-size: 12.5px; font-weight: 600; color: #5c625e; }
+.harv-pop-title { margin: 0; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.025em; line-height: 1.12; color: #101314; text-wrap: balance; }
+.harv-pop-body { margin: 10px 0 0; font-size: 1rem; color: #5c625e; line-height: 1.5; }
+/* Appealing knop (glans + puls) — alleen in de modal */
+.harv-pop-btn {
+  margin-top: 18px; display: inline-flex; align-items: center; gap: 9px;
+  background: #77fb38; color: #06180a; font-weight: 800; font-size: 1.02rem;
+  padding: 10px 20px; border-radius: 11px; text-decoration: none;
+  position: relative; overflow: hidden;
+  animation: hpBtnPulse 2.6s ease-in-out infinite;
+}
+.harv-pop-btn svg { width: 1.05em; height: 1.05em; color: #06180a; flex: none; }
+.harv-pop-btn svg path { stroke-width: 2.6; }
+.harv-pop-btn::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 45%; background: linear-gradient(100deg, transparent, rgba(255,255,255,.7), transparent); transform: translateX(-180%) skewX(-18deg); animation: hpBtnShine 3s ease-in-out infinite; }
+.harv-pop-btn:hover { background: #9bff5c; }
+@keyframes hpBtnPulse { 0%,100% { box-shadow: 0 4px 16px rgba(119,251,56,.4); transform: scale(1); } 50% { box-shadow: 0 8px 26px rgba(119,251,56,.7); transform: scale(1.04); } }
+@keyframes hpBtnShine { 0% { transform: translateX(-180%) skewX(-18deg); } 55%,100% { transform: translateX(420%) skewX(-18deg); } }
+/* Stijl-variant 2 = donker premium */
+.harv-pop[data-variant="2"] .harv-pop-card { background: #101314; color: #f3f5f2; }
+.harv-pop[data-variant="2"] .harv-pop-title { color: #fff; }
+.harv-pop[data-variant="2"] .harv-pop-kicker, .harv-pop[data-variant="2"] .harv-pop-body { color: #b9bfba; }
+.harv-pop[data-variant="2"] .harv-pop-x { background: rgba(255,255,255,.1); color: #c4c9c5; }
+.harv-pop[data-variant="2"] .harv-pop-x:hover { background: rgba(255,255,255,.2); color: #fff; }
+/* Stijl-variant 3 = lichte groen-tint */
+.harv-pop[data-variant="3"] .harv-pop-card { background: #f3fbef; }
+@media (max-width: 520px) { .harv-pop-card { padding: 26px 22px 24px; } .harv-pop-title { font-size: 1.32rem; } }
+@media (prefers-reduced-motion: reduce) {
+  .harv-ring::before { animation: none !important; }
+  .harv-pop-card, .harv-pop-backdrop, .harv-pop-btn, .harv-mini { animation: none !important; transition: none !important; }
+  .harv-pop-btn::after { display: none; }
+  .harv-cta .harv-btn::after, .hfc-btn::after { animation: none !important; }
+}
+
+@keyframes hfcUnderline {
+  0%   { transform: translateX(-8%); opacity: 0; }
+  22%  { opacity: 1; }
+  72%  { opacity: 1; }
+  100% { transform: translateX(140%); opacity: 0; }
+}
+@keyframes hfcIn {
+  from { opacity: 0; transform: translateY(14px) scale(.95); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* (De vaste rechtsonder-bubbel is vervangen door de conversie-pop-up hieronder.) */
 
 @media (max-width: 860px) { .contact-grid { grid-template-columns: 1fr; } }
 
@@ -656,6 +853,15 @@ button { font-family: inherit; cursor: pointer; }
 .footer-top { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.2fr; gap: 2rem; }
 .footer-brand .brand { color: oklch(0.97 0.01 250); }
 .footer-brand .brand small { color: oklch(0.70 0.02 250); }
+/* Logo's met donkere tekst vallen weg op de donkere footer: geef het logo in
+   de footer een licht chipje — maar ALLEEN in het lichte thema. In de dark-
+   variant zijn de logo's juist voor donker ontworpen (RULES 5). Chip groeit
+   met het logo mee; het logo zelf blijft binnen de chip. */
+body:not(.harv-dark) .footer .brand-mark:has(.brand-logo-img[src]:not([src=""])) {
+  background: #fff; border-radius: 9px; padding: 4px 8px;
+  width: auto; height: auto; min-height: 0;
+}
+.footer .brand-mark .brand-logo-img { max-height: 26px; width: auto; max-width: 150px; object-fit: contain; }
 .footer-brand p { margin-top: 1rem; font-size: 0.93rem; line-height: 1.55; max-width: 34ch; color: oklch(0.76 0.02 250); }
 .footer h4 { color: oklch(0.95 0.01 250); font-size: 0.92rem; letter-spacing: 0.01em; margin-bottom: 0.9rem; font-weight: 700; }
 .footer ul { display: flex; flex-direction: column; gap: 0.55rem; }
@@ -667,6 +873,15 @@ button { font-family: inherit; cursor: pointer; }
 .footer-bot a:hover { color: oklch(0.92 0.01 250); }
 @media (max-width: 820px) { .footer-top { grid-template-columns: 1fr 1fr; gap: 1.8rem; } }
 @media (max-width: 440px) { .footer-top { grid-template-columns: 1fr; } }
+/* In het telefoon-frame vuren media queries niet (viewport blijft desktop):
+   zelfde 1-kolom layout afdwingen, anders persen 4 kolommen zich in 390px en
+   breken telefoonnummer/NAW per woord af (RULES 9: mag nooit). */
+.is-framed .footer-top, body.preview-mobile .footer-top { grid-template-columns: 1fr !important; gap: 1.6rem; }
+/* Zelfde frame-probleem bij de cijfers: 2-koloms grid perst de intro-tekst in
+   een smalle kolom waardoor woorden afbreken ("marketingpr/aat"). */
+.is-framed .stats-inner, body.preview-mobile .stats-inner { grid-template-columns: 1fr !important; gap: 1.6rem; }
+/* RULES 9: telefoonnummers en openingstijden nooit over twee regels. */
+.footer a[href^="tel:"], a.val[href^="tel:"], .footer .hours { white-space: nowrap; }
 
 /* ============================== Sticky mobile CTA bar ============================== */
 .mobile-bar {
@@ -677,10 +892,10 @@ button { font-family: inherit; cursor: pointer; }
   transform: translateY(120%); transition: transform 0.35s var(--ease);
 }
 .mobile-bar.show { transform: translateY(0); }
-.mobile-bar .btn { flex: 1; }
+.mobile-bar .btn { flex: 1; padding: 0.62rem 0.9rem; font-size: 0.92rem; border-radius: 10px; }
 /* Bel-knop houdt zich compact; offerte-knop krijgt het gewicht (zoals template 1). */
-.mobile-bar .mb-call { flex: 0 0 auto; min-width: 116px; }
-.mobile-bar .mb-call svg { width: 0.95em; height: 0.95em; }
+.mobile-bar .mb-call { flex: 0 0 auto; width: 48px; min-width: 0; padding-left: 0; padding-right: 0; }
+.mobile-bar .mb-call svg { width: 1.3em; height: 1.3em; }
 .mobile-bar .mb-quote { flex: 1; }
 
 /* Subtiele attentie-bounce: pas na een tijdje, ease-out, geen elastische easing. */
@@ -693,7 +908,7 @@ button { font-family: inherit; cursor: pointer; }
   100% { transform: translateY(0); }
 }
 
-@media (max-width: 760px) { .mobile-bar { display: flex; } body { padding-bottom: 76px; } }
+@media (max-width: 760px) { .mobile-bar { display: flex; padding-block: 0.5rem; } body { padding-bottom: 64px; } }
 @media (prefers-reduced-motion: reduce) {
   .mobile-bar { transition: none; }
   .mobile-bar.nudge .mb-quote { animation: none; }
@@ -873,11 +1088,17 @@ button { font-family: inherit; cursor: pointer; }
 .qw-done { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 16px 8px 8px; }
 .qw-done-ic {
   width: 64px; height: 64px; border-radius: 999px; background: var(--ok); color: var(--on-blue);
-  display: grid; place-items: center; margin-bottom: 16px;
-  animation: qwBounce .5s cubic-bezier(.4,1.6,.6,1);
+  display: grid; place-items: center; margin-bottom: 16px; position: relative;
+  box-shadow: 0 10px 26px -8px rgba(22,163,74,.5);
+  animation: qwBounce .55s cubic-bezier(.22,1,.36,1) both;
 }
-@keyframes qwBounce { 0% { transform: scale(0); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
-.qw-done-ic svg { width: 30px; height: 30px; }
+.qw-done-ic::after {
+  content: ""; position: absolute; inset: -2px; border-radius: 999px;
+  border: 2px solid var(--ok); animation: qwDoneRing 1.9s ease-out infinite;
+}
+@keyframes qwBounce { 0% { transform: scale(0); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
+@keyframes qwDoneRing { 0% { transform: scale(1); opacity: .55; } 100% { transform: scale(1.55); opacity: 0; } }
+.qw-done-ic svg { width: 30px; height: 30px; position: relative; z-index: 1; }
 .qw-done-title { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.03em; margin: 0 0 8px; color: var(--c-ink); }
 .qw-done-body { font-size: 0.92rem; color: var(--c-ink-soft); margin: 0 0 18px; max-width: 320px; }
 .qw-summary { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
@@ -903,16 +1124,19 @@ button { font-family: inherit; cursor: pointer; }
 .qw-cta-ic { width: 30px; height: 30px; border-radius: 999px; background: var(--c-accent); display: grid; place-items: center; }
 .qw-cta-ic svg { width: 14px; height: 14px; color: var(--on-blue); }
 @media (max-width: 900px) { .qw { max-width: 560px; } }
-@media (max-width: 560px) { .qw { margin-inline: auto; max-width: 440px; } .qw-tagline { margin-left: 0; } }
+@media (max-width: 560px) { .qw { margin-inline: auto; max-width: 440px; } .qw-tagline { margin-left: 14px; } }
 @media (max-width: 380px) { .qw-row-2 { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) {
   .qw-body, .qw-done-ic, .qw-tagline-dot { animation: none !important; }
+  .qw-done-ic::after { display: none; }
   .qw-cta:hover { transform: none; }
 }
 </style>
 <style>
   /* ===== Ingebouwde device-preview (Desktop / Mobiel) + mobiele mini-header ===== */
   .is-framed .devbar, .is-framed .devframe-overlay, .is-framed .harv-intro { display: none !important; }
+  /* In de mobiele preview alleen "Terug naar desktop" tonen; de Desktop/Mobiel-toggle is daar overbodig. */
+  body.dev-locked .devbar { display: none !important; }
   .devbar {
     position: fixed; top: 84px; left: 50%; transform: translateX(-50%);
     z-index: 9000; display: inline-flex; align-items: center; gap: 2px;
@@ -923,7 +1147,7 @@ button { font-family: inherit; cursor: pointer; }
   }
   .devbtn {
     appearance: none; border: 0; background: transparent; color: #c6cde0;
-    padding: 7px 15px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+    padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
     cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
     transition: color .18s ease, background .18s ease;
   }
@@ -933,16 +1157,34 @@ button { font-family: inherit; cursor: pointer; }
   .devbtn:focus-visible { outline: 2px solid #ffb48c; outline-offset: 2px; }
   .devbar-tip {
     position: absolute; top: calc(100% + 11px); left: 50%; transform: translateX(-50%);
-    white-space: nowrap; background: color-mix(in oklch, var(--amber) 78%, transparent); color: var(--on-amber);
-    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-    padding: 8px 14px; border-radius: 10px; font-size: 12.5px; font-weight: 700;
-    box-shadow: 0 12px 30px rgba(0,0,0,.25); pointer-events: none;
+    white-space: nowrap; color: var(--on-amber);
+    display: inline-flex; align-items: center; gap: 6px;
+    background: linear-gradient(180deg, color-mix(in oklch, var(--amber) 74%, transparent), color-mix(in oklch, var(--amber) 60%, transparent));
+    -webkit-backdrop-filter: blur(9px) saturate(1.3); backdrop-filter: blur(9px) saturate(1.3);
+    padding: 8px 15px; border-radius: 999px; font-size: 12.5px; font-weight: 700;
+    box-shadow: 0 10px 24px -6px color-mix(in oklch, var(--amber) 42%, transparent), inset 0 1px 0 rgba(255,255,255,.5);
+    pointer-events: none;
   }
   .devbar-tip[hidden] { display: none; }
   .devbar-tip::before {
     content: ""; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
-    border: 6px solid transparent; border-bottom-color: color-mix(in oklch, var(--amber) 78%, transparent);
+    border: 6px solid transparent; border-bottom-color: color-mix(in oklch, var(--amber) 66%, transparent);
   }
+  .dt-ic { width: 14px; height: 14px; flex: none; }
+  /* Tag-varianten via ?tip=1|2|3 (1 = amber glas, default). */
+  .devbar-tip[data-v="2"] {
+    color: #eaf1ff;
+    background: linear-gradient(180deg, rgba(42,50,74,.72), rgba(22,28,44,.64));
+    box-shadow: 0 10px 26px -8px rgba(8,11,20,.5), inset 0 1px 0 rgba(255,255,255,.16);
+  }
+  .devbar-tip[data-v="2"]::before { border-bottom-color: rgba(42,50,74,.72); }
+  .devbar-tip[data-v="3"] {
+    color: #06180a;
+    background: linear-gradient(180deg, color-mix(in oklch, #77fb38 92%, #fff), #77fb38);
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+    box-shadow: 0 10px 24px -6px rgba(119,251,56,.5), inset 0 1px 0 rgba(255,255,255,.6);
+  }
+  .devbar-tip[data-v="3"]::before { border-bottom-color: #77fb38; }
   .devbar.nudge { animation: devShake 2.6s ease-in-out 2; }
   @keyframes devShake {
     0%, 86%, 100% { transform: translateX(-50%); }
@@ -953,16 +1195,28 @@ button { font-family: inherit; cursor: pointer; }
   .devframe-overlay {
     position: fixed; inset: 0; z-index: 8990;
     background: rgba(8,11,20,.62); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
-    display: grid; grid-template-rows: 1fr auto; place-items: center; gap: 14px;
-    padding: 124px 16px 24px;
   }
   .devframe-overlay[hidden] { display: none; }
+  /* Doorzichtig "terug naar desktop"-pilletje bovenaan de mobiele preview */
+  .devframe-back {
+    position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 2;
+    appearance: none; cursor: pointer;
+    border: 1px solid rgba(255,255,255,.28);
+    background: rgba(255,255,255,.14); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    color: #fff; font-weight: 600; font-size: 12px;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 13px; border-radius: 999px;
+    transition: background .18s var(--ease), border-color .18s var(--ease);
+  }
+  .devframe-back:hover { background: rgba(255,255,255,.24); border-color: rgba(255,255,255,.46); }
+  .devframe-back svg { width: 13px; height: 13px; }
+  .devframe-back:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  /* Echte iPhone-viewport: het iframe is ALTIJD 390×844 (content via border-box 410×864) ongeacht
+     zoom; het frame schaalt alleen visueel om in beeld te passen (--devscale via JS). */
   .devframe {
-    position: relative;
-    /* Altijd telefoon-verhouding (iPhone ~390×844), schaalt mee met de beschikbare
-       hoogte — onafhankelijk van browser-zoom, dus nooit "iPad-achtig" breed. */
-    height: min(844px, calc(100vh - 140px));
-    aspect-ratio: 390 / 844; width: auto; max-width: calc(100vw - 32px);
+    position: absolute; top: 50%; left: 50%;
+    width: 410px; height: 864px;
+    transform: translate(-50%, -50%) scale(var(--devscale, 1)); transform-origin: center center;
     border: 10px solid #1b212c; border-radius: 46px; overflow: hidden;
     background: #fff; box-shadow: 0 40px 90px -30px rgba(0,0,0,.7), inset 0 0 0 1px #05070b;
   }
@@ -971,13 +1225,8 @@ button { font-family: inherit; cursor: pointer; }
     width: 38%; height: 22px; background: #1b212c; border-radius: 0 0 14px 14px; z-index: 2;
   }
   .devframe iframe { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
-  .devframe-close {
-    appearance: none; border: 0; cursor: pointer;
-    background: rgba(255,255,255,.94); color: #15171f; font-weight: 600; font-size: 13px;
-    padding: 9px 18px; border-radius: 999px; box-shadow: 0 10px 28px rgba(0,0,0,.35);
-  }
-  .devframe-close:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
   body.dev-locked { overflow: hidden; }
+  .is-framed .harv-pop { display: none !important; }   /* pop-up niet IN de telefoon; top-level pop-up komt eroverheen */
   /* Helders eigen .harv-badge is verwijderd: "Presented by Harv" komt nu alleen
      uit de generator-bubbel ({{HARV_PRESENTED_BY}}, rechtsonder). */
   @media (max-width: 760px) {
@@ -1032,11 +1281,14 @@ button { font-family: inherit; cursor: pointer; }
   <span class="devbar-tip" id="devbarTip" hidden>Bekijk ook de mobiele versie</span>
 </div>
 <div class="devframe-overlay" id="devOverlay" hidden>
+  <button type="button" class="devframe-back" id="devClose">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="4" width="19" height="13" rx="2" stroke="currentColor" stroke-width="2"/><path d="M9 21h6M12 17v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    Terug naar desktop
+  </button>
   <div class="devframe">
     <span class="devframe-notch" aria-hidden="true"></span>
     <iframe id="devIframe" title="Mobiele weergave van deze pagina"></iframe>
   </div>
-  <button type="button" class="devframe-close" id="devClose">Terug naar desktop</button>
 </div>
 <!-- "Presented by Harv" = ALLEEN de per-lead bubbel die de generator injecteert
      via {{HARV_PRESENTED_BY}} (rechtsonder, alle viewports). Helders eigen
@@ -1048,20 +1300,29 @@ button { font-family: inherit; cursor: pointer; }
   var overlay = document.getElementById('devOverlay');
   var iframe = document.getElementById('devIframe');
   var tip = document.getElementById('devbarTip');
+  var tv = (new URLSearchParams(location.search).get('tip') || '2'); if (!/^[123]$/.test(tv)) tv = '2';
+  tip.setAttribute('data-v', tv);
   var btns = bar.querySelectorAll('.devbtn');
   var closeBtn = document.getElementById('devClose');
   var used = false;
   function hideTip() { tip.hidden = true; bar.classList.remove('nudge'); }
+  function fitFrame() {
+    var f = document.querySelector('.devframe'); if (!f) return;
+    var s = Math.min(1, (window.innerHeight - 92) / 864, (window.innerWidth - 24) / 410);
+    f.style.setProperty('--devscale', (s > 0.2 ? s : 0.2).toFixed(3));
+  }
   function setMode(mobile) {
     used = true; hideTip();
     if (mobile && !iframe.src) iframe.src = location.pathname;
     overlay.hidden = !mobile;
     document.body.classList.toggle('dev-locked', mobile);
+    if (mobile) fitFrame();
     btns.forEach(function (b) { b.setAttribute('aria-pressed', String((b.dataset.mode === 'mobile') === mobile)); });
   }
   btns.forEach(function (b) { b.addEventListener('click', function () { setMode(b.dataset.mode === 'mobile'); }); });
   closeBtn.addEventListener('click', function () { setMode(false); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !overlay.hidden) setMode(false); });
+  window.addEventListener('resize', function () { if (!overlay.hidden) fitFrame(); });
   /* Nudge "Bekijk ook de mobiele versie": verschijnt tijdens het scrollen zodra
      je de eerste content-secties bereikt (net als bij de andere versie), met een
      30s-fallback en een fallback onderaan de pagina. De tip blijft staan tot je
@@ -1073,13 +1334,13 @@ button { font-family: inherit; cursor: pointer; }
     void bar.offsetWidth;            /* herstart de shake-animatie indien nodig */
     bar.classList.add('nudge');
   }
-  /* Na 15s zonder gebruik, óf zodra je de sectie "Wat wij voor uw dak doen"
-     echt boven in beeld hebt gescrold — eerder kwam de melding te vroeg. */
-  setTimeout(nudge, 15000);
+  /* Na 30s zonder gebruik, óf zodra je de projecten-sectie bereikt —
+     dezelfde timing als template A, anders komt de melding hier te vroeg. */
+  setTimeout(nudge, 30000);
   /* De sectie staat verderop in de DOM dan dit script, dus wacht tot de
      pagina klaar is voordat we 'm volgen. */
   function watchSection() {
-    var anchor = document.getElementById('diensten');
+    var anchor = document.getElementById('projecten');
     if (!anchor) return;
     function check() {
       if (used) return;
@@ -1242,12 +1503,14 @@ button { font-family: inherit; cursor: pointer; }
       <span class="brand-txt"><span data-tpl="COMPANY_NAME">Van den Berg Dakwerken</span><small>Erkend dakdekker · <span data-tpl="CITY">Utrecht</span></small></span>
     </a>
 
+    <!-- Vaste nav (besluit 2026-06-11): Diensten, Kennis, Projecten.
+         Waarom wij/Werkwijze horen er normaal niet in; Team nooit.
+         data-nav-prio: hoger = eerder weg bij ruimtegebrek; Diensten en
+         Projecten gaan als laatste (Diensten prio 0 = nooit). -->
     <nav class="nav" aria-label="Hoofdmenu">
-      <a class="navlink" href="#diensten" data-tpl="NAV_SERVICES">Diensten</a>
-      <a class="navlink" href="#werkwijze" data-tpl="NAV_PROCESS">Werkwijze</a>
-      <a class="navlink" href="#waarom" data-tpl="NAV_WHY">Waarom wij</a>
-      <a class="navlink" href="#projecten" data-tpl="NAV_PROJECTS">Projecten</a>
-      <a class="navlink" href="#kennis" data-tpl="NAV_KNOWLEDGE">Kennis</a>
+      <a class="navlink" href="#diensten" data-nav-prio="0" data-tpl="NAV_SERVICES">Diensten</a>
+      <a class="navlink" href="#kennis" data-nav-prio="2" data-tpl="NAV_KNOWLEDGE">Kennis</a>
+      <a class="navlink" href="#projecten" data-nav-prio="1" data-tpl="NAV_PROJECTS">Projecten</a>
       <span class="header-cta">
         <a class="header-phone" id="nav-phone" href="tel:+31301234567" aria-label="Bel ons">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 5 5L16 13l5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
@@ -1271,10 +1534,8 @@ button { font-family: inherit; cursor: pointer; }
   </div>
   <nav class="mm-links" aria-label="Mobiel menu">
     <a href="#diensten" data-tpl="NAV_SERVICES">Diensten</a>
-    <a href="#werkwijze" data-tpl="NAV_PROCESS">Werkwijze</a>
-    <a href="#waarom" data-tpl="NAV_WHY">Waarom wij</a>
-    <a href="#projecten" data-tpl="NAV_PROJECTS">Projecten</a>
     <a href="#kennis" data-tpl="NAV_KNOWLEDGE">Kennis</a>
+    <a href="#projecten" data-tpl="NAV_PROJECTS">Projecten</a>
     <a href="#offerte" data-tpl="NAV_CONTACT">Contact</a>
   </nav>
   <div class="mm-foot">
@@ -1282,6 +1543,30 @@ button { font-family: inherit; cursor: pointer; }
     <a class="btn btn-ghost btn-lg" href="tel:+31301234567">Bel <span data-tpl="FOOT_PHONE">030 - 123 45 67</span></a>
   </div>
 </div>
+
+<script>
+  /* Nav-overflow (RULES): past de balk niet op één regel, verberg dan items op
+     prioriteit (hoog = eerst weg). Diensten heeft prio 0 en verdwijnt nooit. */
+  (function () {
+    var nav = document.querySelector('.header .nav');
+    var inner = document.querySelector('.header-inner');
+    if (!nav || !inner) return;
+    var items = Array.prototype.slice.call(nav.querySelectorAll('[data-nav-prio]'))
+      .sort(function (a, b) { return (+b.getAttribute('data-nav-prio')) - (+a.getAttribute('data-nav-prio')); });
+    function overflows() {
+      return inner.scrollWidth > inner.clientWidth + 1;
+    }
+    function adjust() {
+      items.forEach(function (el) { if (+el.getAttribute('data-nav-prio') > 0) el.hidden = false; });
+      for (var i = 0; i < items.length && overflows(); i++) {
+        if (+items[i].getAttribute('data-nav-prio') > 0) items[i].hidden = true;
+      }
+    }
+    window.addEventListener('resize', adjust, { passive: true });
+    if (document.readyState === 'complete') adjust();
+    else window.addEventListener('load', adjust);
+  })();
+</script>
 
 <main id="main">
 
@@ -1549,18 +1834,8 @@ button { font-family: inherit; cursor: pointer; }
         </figure>
       </div>
 
-      <div class="team-block">
-        <div class="team-head reveal">
-          <h3 data-tpl="TEAM_TITLE">De ploeg die langskomt</h3>
-          <p data-tpl="TEAM_INTRO">Vaste gezichten, geen onderaannemers. Dit zijn de mensen die uw dak onder handen nemen.</p>
-        </div>
-        <div class="team-grid reveal-stagger">
-          <div class="member"><span class="mono-mark mono" aria-hidden="true">MB</span><h4 data-tpl="TEAM_1_NAME">Mark van den Berg</h4><p class="role" data-tpl="TEAM_1_ROLE">Eigenaar &amp; dakdekker</p></div>
-          <div class="member"><span class="mono-mark mono" aria-hidden="true">TJ</span><h4 data-tpl="TEAM_2_NAME">Tom Jansen</h4><p class="role" data-tpl="TEAM_2_ROLE">Voorman</p></div>
-          <div class="member"><span class="mono-mark mono" aria-hidden="true">YE</span><h4 data-tpl="TEAM_3_NAME">Youssef El Amrani</h4><p class="role" data-tpl="TEAM_3_ROLE">Dakdekker / loodgieter</p></div>
-          <div class="member"><span class="mono-mark mono" aria-hidden="true">DV</span><h4 data-tpl="TEAM_4_NAME">Daan Visser</h4><p class="role" data-tpl="TEAM_4_ROLE">Inspecteur &amp; planning</p></div>
-        </div>
-      </div>
+      <!-- Team-sectie permanent verwijderd (besluit 2026-06-11): demo's tonen
+           nooit een ploeg — geen gescrapete namen, geen verzonnen gezichten. -->
     </div>
   </section>
 
@@ -1678,10 +1953,16 @@ button { font-family: inherit; cursor: pointer; }
           <p id="successMsg"></p>
           <button type="button" class="again" id="formAgain">Nog een aanvraag doen</button>
           <div class="harv-cta">
-            <p class="harv-kicker">Harv Agency</p>
+            <div class="harv-who">
+              <img class="harv-face" src="../assets/nico.jpg" alt="Nicolas van Harv Agency">
+              <span><span class="hw-name">Nicolas</span><span class="hw-sub">Harv Agency</span></span>
+            </div>
             <h4>Bevalt deze site?</h4>
-            <p>Laat Harv hem voor u bouwen, met dezelfde snelle aanpak.</p>
-            <a class="harv-btn" id="harvCtaBtnContact" href="https://cal.com/harv-agency/20min.nicolas" target="_blank" rel="noopener">Plan een afspraak →</a>
+            <p>Wij bouwen premium sites zonder premium prijs.</p>
+            <a class="harv-btn" id="harvCtaBtnContact" href="https://cal.com/harv-agency/20min.nicolas" target="_blank" rel="noopener">
+              Plan een gesprek
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
           </div>
         </div>
       </div>
@@ -1737,7 +2018,6 @@ button { font-family: inherit; cursor: pointer; }
 <div class="mobile-bar" id="mobileBar" aria-label="Snelcontact">
   <a class="btn btn-ghost mb-call" href="tel:+31301234567" style="background:var(--bg);" aria-label="Bel ons op 030 123 45 67">
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 5 5L16 13l5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
-    Bel nu
   </a>
   <a class="btn btn-amber mb-quote" href="#offerte">Gratis offerte</a>
 </div>
@@ -1827,6 +2107,13 @@ button { font-family: inherit; cursor: pointer; }
   function animateCount(el) {
     var raw = el.getAttribute("data-to");
     var isDecimal = el.hasAttribute("data-decimal");
+    /* Reserveer de eindbreedte: tijdens het tellen groeit het getal anders in
+       breedte en verspringt de hele balk (regels wrappen heen en weer). */
+    var keep = el.textContent;
+    el.textContent = raw;
+    el.style.display = "inline-block";
+    el.style.minWidth = el.offsetWidth + "px";
+    el.textContent = keep;
     if (isDecimal) {
       var target = parseFloat(raw.replace(",", "."));
       var start = null, dur = 1400;
@@ -2182,7 +2469,9 @@ button { font-family: inherit; cursor: pointer; }
       // Reviews: alleen de volle; geen enkele → reviewblok (+ kop) weg.
       var rg=document.querySelector('.rev-team .reviews-grid'), full=0;
       if(rg){ Array.prototype.forEach.call(rg.querySelectorAll('.review'),function(r){ var q=tx(r.querySelector('blockquote')).replace(/["'“”‘’]/g,'').trim(); if(q.length>2) full++; else hide(r); });
-        if(full===0){ hide(rg); hide(rg.previousElementSibling); } else rg.style.gridTemplateColumns='repeat('+Math.min(full,3)+',minmax(0,1fr))'; }
+        /* Kolommen via CSS-var, NIET inline grid-template-columns: een inline
+           waarde verslaat de mobiele media-queries en perste 3 kolommen in 390px. */
+        if(full===0){ hide(rg); hide(rg.previousElementSibling); } else rg.style.setProperty('--tm-cols', Math.min(full,3)); }
       // Team: alleen leden met echte naam; geen enkele → teamblok weg.
       var tb=document.querySelector('.rev-team .team-block'), named=0;
       if(tb){ Array.prototype.forEach.call(tb.querySelectorAll('.member'),function(m){ if(tx(m.querySelector('h4')).length>0) named++; else hide(m); }); if(named<1) hide(tb); }
@@ -2194,11 +2483,113 @@ button { font-family: inherit; cursor: pointer; }
   })();
 </script>
 
-<!-- Per-lead Harv booking bubble + tracking pixel (injected by the generator).
-     De wrapper houdt de onvervulde {{...}}-placeholders onzichtbaar in de kale template;
-     de generator-bubbel is position:fixed en ontsnapt aan deze off-screen wrapper, de
-     tracking-pixel laadt gewoon. -->
-<div aria-hidden="true" style="position:absolute;left:-9999px;top:0;width:1px;height:1px;overflow:hidden">{{HARV_PRESENTED_BY}}{{TRACKING_PIXEL}}</div>
+<!-- Harv: vaste mini-bubbel rechtsonder (blijft altijd staan) + conversie-modal.
+     Stijl-variant via ?popup=1|2|3. Modal opent na ~12s of zodra de donkere contactsectie in beeld komt;
+     sluiten klapt 'm terug naar de hoek (mini blijft staan, klik = opnieuw open). Link hoeft niet te werken in de kale template. -->
+<a class="harv-mini" id="harvMini" href="https://cal.com/harv-agency/20min.nicolas" target="_blank" rel="noopener" aria-label="Plan een gesprek met Nicolas van Harv Agency">
+  <img src="../assets/nico.jpg" alt="">
+  <span><b>Nicolas</b><span class="hm-sub">Meer dan alleen een snelle demo?</span><span class="lnk">Plan een gesprek <span class="arr">→</span></span></span>
+</a>
+<div class="harv-pop" id="harvPop" hidden>
+  <div class="harv-pop-backdrop" data-pop-close></div>
+  <div class="harv-pop-card harv-ring" role="dialog" aria-modal="true" aria-label="Plan een gesprek met Harv Agency">
+    <button class="harv-pop-x" type="button" aria-label="Sluiten" data-pop-close>
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+    </button>
+    <div class="harv-who">
+      <img class="harv-face" src="../assets/nico.jpg" alt="Nicolas van Harv Agency">
+      <span><span class="hw-name">Nicolas</span><span class="hw-sub">Harv Agency</span></span>
+    </div>
+    <h3 class="harv-pop-title">Dit is slechts een voorproefje van wat het kan zijn</h3>
+    <p class="harv-pop-body">Wat u hier ziet is maar een klein deel van wat we voor u kunnen bouwen. Wij maken premium sites, zonder het premium prijskaartje. Plan een vrijblijvend gesprek van 20 minuten, dan laten we de rest zien.</p>
+    <a class="harv-pop-btn" href="https://cal.com/harv-agency/20min.nicolas" target="_blank" rel="noopener">
+      Plan een gesprek
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </div>
+</div>
+<script>
+(function () {
+  var mini = document.getElementById('harvMini');
+  var pop  = document.getElementById('harvPop');
+  if (!mini || !pop) return;
+  var v = (new URLSearchParams(location.search).get('popup') || '1');
+  if (!/^[123]$/.test(v)) v = '1';
+  pop.setAttribute('data-variant', v);
+  var isOpen = false, autoDone = false, card = pop.querySelector('.harv-pop-card');
+  function open() {
+    if (isOpen) return; isOpen = true; autoDone = true;
+    mini.classList.add('is-hidden');
+    pop.classList.remove('is-closing'); pop.hidden = false;
+    requestAnimationFrame(function () { pop.classList.add('is-open'); });
+  }
+  function close() {
+    if (!isOpen) return; isOpen = false;
+    pop.classList.remove('is-open'); pop.classList.add('is-closing');
+    var done = function () { if (pop.hidden) return; pop.classList.remove('is-closing'); pop.hidden = true; mini.classList.remove('is-hidden'); };
+    card.addEventListener('animationend', done, { once: true });
+    setTimeout(done, 520);   /* fallback als animationend niet vuurt (reduced-motion) */
+  }
+  /* De mini is een directe link naar de boekingspagina (geen modal-tussenstap). */
+  pop.querySelectorAll('[data-pop-close]').forEach(function (el) { el.addEventListener('click', close); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && isOpen) close(); });
+  setTimeout(function () { if (!autoDone) open(); }, 60000);     /* na ~60s, of eerder: donkere sectie in beeld */
+  var dark = document.querySelector('footer, .footer, .foot') || document.getElementById('offerte') || document.querySelector('.contact');
+  if (dark && 'IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (en) { if (en.isIntersecting && !autoDone) { open(); io.disconnect(); } });
+    }, { rootMargin: '0px 0px -12% 0px', threshold: 0.01 });
+    io.observe(dark);
+  }
+})();
+</script>
+<!-- "Voorproefje"-pop-up: verschijnt als iemand op een content-kaart (artikel/project/teamlid)
+     of een dode link klikt — er is alleen een homepage, dus we vangen de klik af. -->
+<div class="harv-pop" id="harvPreview" data-variant="1" hidden>
+  <div class="harv-pop-backdrop" data-prev-close></div>
+  <div class="harv-pop-card harv-ring" role="dialog" aria-modal="true" aria-label="Voorproefje">
+    <button class="harv-pop-x" type="button" aria-label="Sluiten" data-prev-close>
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+    </button>
+    <div class="harv-who">
+      <img class="harv-face" src="../assets/nico.jpg" alt="Nicolas van Harv Agency">
+      <span><span class="hw-name">Nicolas</span><span class="hw-sub">Harv Agency</span></span>
+    </div>
+    <h3 class="harv-pop-title">Dit is slechts een voorproefje ;)</h3>
+    <p class="harv-pop-body">We hebben alleen de homepagina alvast voor u gemaakt — een klein deel van de service. Wij bouwen premium sites, zonder het premium prijskaartje. Plan een gesprek als het u bevalt.</p>
+    <a class="harv-pop-btn" href="https://cal.com/harv-agency/20min.nicolas" target="_blank" rel="noopener">
+      Plan een gesprek
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </div>
+</div>
+<script>
+(function () {
+  var prev = document.getElementById('harvPreview'); if (!prev) return;
+  var card = prev.querySelector('.harv-pop-card'); var open = false;
+  function openP() { if (open) return; open = true; prev.classList.remove('is-closing'); prev.hidden = false; requestAnimationFrame(function(){ prev.classList.add('is-open'); }); }
+  function closeP() { if (!open) return; open = false; prev.classList.remove('is-open'); prev.classList.add('is-closing'); var done = function(){ if (prev.hidden) return; prev.classList.remove('is-closing'); prev.hidden = true; }; card.addEventListener('animationend', done, { once: true }); setTimeout(done, 520); }
+  prev.querySelectorAll('[data-prev-close]').forEach(function (el) { el.addEventListener('click', closeP); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && open) closeP(); });
+  /* Onderschep klikken op content-kaarten (artikelen/projecten/teamleden) én dode links — alles in
+     CAPTURE vóór de link navigeert. De nav + het mobiele menu worden met rust gelaten; échte links
+     (tel/mail/extern/cal.com) en ankers naar een bestaande sectie blijven gewoon werken. */
+  document.addEventListener('click', function (e) {
+    var t = e.target; if (!t.closest) return;
+    if (t.closest('.harv-pop')) return;                                                    // de pop-ups zelf nooit onderscheppen
+    if (t.closest('.article, .project, .member')) { e.preventDefault(); e.stopPropagation(); openP(); return; }
+    var a = t.closest('a');
+    if (a && !a.closest('.nav, .mobile-menu')) {
+      var href = a.getAttribute('href') || '';
+      if (/^(tel:|mailto:|https?:)/i.test(href)) return;                                  // echte/externe link
+      if (href.charAt(0) === '#' && href.length > 1 && document.getElementById(href.slice(1))) return; // bestaande sectie → scroll
+      e.preventDefault(); e.stopPropagation(); openP();                                    // dode link → voorproefje
+    }
+  }, true);
+})();
+</script>
+<!-- Tracking-pixel (door de generator gevuld); off-screen zodat de kale placeholder niet zichtbaar is. -->
+<div aria-hidden="true" style="position:absolute;left:-9999px;top:0;width:1px;height:1px;overflow:hidden">{{TRACKING_PIXEL}}</div>
 
 <!-- Fallback company data for the multi-step quote widget (hydration above is authoritative;
      this only fills COMPANY_NAME if hydration did not run, e.g. JSON parse failure). -->

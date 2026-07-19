@@ -121,15 +121,27 @@ const Icon = {
 };
 
 // ───── Options data ─────
+// `short` = compact label voor telefoons (twee chips naast elkaar in het smalle formulier);
+// CSS in de templates wisselt .qw-lbl-full/.qw-lbl-short op ≤760px.
 const SERVICES = [
-  { id: 'nieuw_dak', label: 'Nieuw dak', icon: Icon.house },
-  { id: 'renovatie', label: 'Dakrenovatie', icon: Icon.wrench },
-  { id: 'reparatie', label: 'Reparatie / lekkage', icon: Icon.drop },
-  { id: 'isolatie', label: 'Dakisolatie', icon: Icon.shield },
-  { id: 'dakgoot', label: 'Dakgoot / zinkwerk', icon: Icon.gutter },
-  { id: 'dakraam', label: 'Dakraam', icon: Icon.window },
-  { id: 'inspectie', label: 'Inspectie / advies', icon: Icon.search },
+  { id: 'nieuw_dak', label: 'Nieuw dak', short: 'Nieuw dak', icon: Icon.house },
+  { id: 'renovatie', label: 'Dakrenovatie', short: 'Renovatie', icon: Icon.wrench },
+  { id: 'reparatie', label: 'Reparatie / lekkage', short: 'Reparatie', icon: Icon.drop },
+  { id: 'isolatie', label: 'Dakisolatie', short: 'Isolatie', icon: Icon.shield },
+  { id: 'dakgoot', label: 'Dakgoot / zinkwerk', short: 'Dakgoot', icon: Icon.gutter },
+  { id: 'dakraam', label: 'Dakraam', short: 'Dakraam', icon: Icon.window },
+  { id: 'inspectie', label: 'Inspectie / advies', short: 'Inspectie', icon: Icon.search },
 ];
+
+// Twee spans per label: de template-CSS toont op telefoon de korte variant.
+function ChipLabel({ s }) {
+  return (
+    <>
+      <span className="qw-chip-label qw-lbl-full">{s.label}</span>
+      <span className="qw-chip-label qw-lbl-short">{s.short || s.label}</span>
+    </>
+  );
+}
 
 const DAKTYPES = [
   { id: 'plat', label: 'Plat dak', icon: Icon.flat },
@@ -311,6 +323,13 @@ function ensureValidationStyles() {
     }
     .qw-reassure-ic { display: inline-flex; width: 15px; height: 15px; color: var(--c-accent, #f06a2a); }
     .qw-reassure-ic svg { width: 15px; height: 15px; }
+    /* Dienst-chips: op telefoon de korte labels, zodat er twee naast elkaar passen
+       en het formulier minder lang wordt. */
+    .qw-lbl-short { display: none; }
+    @media (max-width: 760px) {
+      .qw-lbl-full { display: none; }
+      .qw-lbl-short { display: inline; }
+    }
   `;
   document.head.appendChild(el);
 }
@@ -562,7 +581,7 @@ function DienstStep({ diensten, toggleDienst }) {
             aria-pressed={diensten.includes(s.id)}
             onClick={() => toggleDienst(s.id)}>
             <span className="qw-chip-ic">{s.icon}</span>
-            <span className="qw-chip-label">{s.label}</span>
+            <ChipLabel s={s} />
           </button>
         ))}
       </div>
@@ -603,7 +622,7 @@ function ContactStep({ d, set, errors, touched, onBlurField, showDienst, toggleD
                 aria-pressed={d.diensten.includes(s.id)}
                 onClick={() => toggleDienst(s.id)}>
                 <span className="qw-chip-ic">{s.icon}</span>
-                <span className="qw-chip-label">{s.label}</span>
+                <ChipLabel s={s} />
               </button>
             ))}
           </div>
@@ -703,29 +722,30 @@ function ensureHarvCtaStyles() {
   el.textContent = `
     .qw-harv {
       margin-top: 22px;
-      background: #4928FD;
-      color: #fff;
+      background: #fff;
+      color: #101314;
+      border: 1px solid rgba(16,19,20,.10);
       border-radius: 14px;
       padding: 16px;
       text-align: left;
     }
     .qw-harv-kicker {
       font-size: 12px;
-      letter-spacing: .04em;
-      color: rgba(255,255,255,.72);
+      letter-spacing: .01em;
+      color: #5c625e;
       margin: 0 0 6px;
       font-weight: 600;
     }
     .qw-harv-title {
-      font-size: 18px;
+      font-size: 17px;
       font-weight: 700;
-      color: #fff;
-      margin: 0 0 4px;
-      line-height: 1.2;
+      color: #101314;
+      margin: 0 0 12px;
+      line-height: 1.25;
     }
     .qw-harv-body {
       font-size: 14px;
-      color: rgba(255,255,255,.86);
+      color: #5c625e;
       margin: 0 0 14px;
       line-height: 1.45;
     }
@@ -733,25 +753,19 @@ function ensureHarvCtaStyles() {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: #fff;
-      color: #4928FD;
+      background: #77fb38;
+      color: #06180a;
+      border: 0;
       font-weight: 700;
-      border-radius: 10px;
-      padding: 10px 16px;
+      padding: 8px 14px;
+      margin-top: 4px;
+      border-radius: 9px;
       text-decoration: none;
-      font-size: 14px;
-      transition: transform .15s ease, box-shadow .15s ease, background-color .15s ease;
-      box-shadow: 0 1px 2px rgba(0,0,0,.12);
+      font-size: 13px;
+      transition: background .15s ease;
     }
-    .qw-harv-btn:hover {
-      background: #f2f0ff;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 14px rgba(0,0,0,.18);
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .qw-harv-btn { transition: none; }
-      .qw-harv-btn:hover { transform: none; }
-    }
+    .qw-harv-arrow { color: #06180a; }
+    .qw-harv-btn:hover { background: #9bff5c; }
   `;
   document.head.appendChild(el);
 }
@@ -792,11 +806,10 @@ function Confirmation({ d }) {
       </div>
 
       <div className="qw-harv">
-        <p className="qw-harv-kicker">✶ Presented by Harv Agency</p>
-        <h4 className="qw-harv-title">Bevalt deze site?</h4>
-        <p className="qw-harv-body">Laat Harv hem voor u bouwen, met dezelfde snelle aanpak.</p>
+        <p className="qw-harv-kicker">Presented by Harv Agency</p>
+        <h4 className="qw-harv-title">Wij bouwen premium sites zonder premium prijs. Verder praten?</h4>
         <a className="qw-harv-btn" href={harvUrl} target="_blank" rel="noopener">
-          Plan een afspraak →
+          Plan een gesprek <span className="qw-harv-arrow" aria-hidden="true">→</span>
         </a>
       </div>
     </div>
@@ -806,8 +819,9 @@ function Confirmation({ d }) {
 // ───── Mount ─────
 // Hoofd-widget (volgorde uit de globale vlag: engage-first op origineel,
 // contact-first op helder).
+// combinedContact via window.__qwCombinedContact (per template): contact + dienstvraag samen op pagina 1.
 const qwMain = document.getElementById('quote-widget-mount');
-if (qwMain) ReactDOM.createRoot(qwMain).render(<QuoteWidget />);
+if (qwMain) ReactDOM.createRoot(qwMain).render(<QuoteWidget combinedContact={typeof window !== 'undefined' && !!window.__qwCombinedContact} />);
 // Optionele tweede widget onderaan de pagina: altijd contact-first ("vraag eerst
 // de contactgegevens"). Alleen aanwezig op templates die dit mountpunt hebben
 // (origineel); helder heeft 'm niet en blijft dus één widget.

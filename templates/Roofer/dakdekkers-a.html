@@ -70,6 +70,27 @@
     --shell-pad: 28px;
   }
 
+  /* ── Donkere variant (RULES 3b): generator zet body.harv-dark wanneer de
+     eigen site van de lead donker is (of via --theme dark). Alleen de
+     neutrale ramp kantelt; accent/dark-merkrollen blijven van #harv-brand. ── */
+  body.harv-dark {
+    --c-bg: #0b1220;
+    --c-surface: #121c2f;
+    --c-surface-tint: #172339;
+    --c-ink: #edf1f8;
+    --c-ink-soft: #b9c3d6;
+    --c-ink-mute: #8e99ad;
+    --c-line: #263350;
+  }
+  body.harv-dark .nav-bar, body.harv-dark .nav-wrap { background: rgba(11, 18, 32, 0.92); }
+  body.harv-dark img { filter: brightness(0.96); }
+  /* Witte component-kaarten kantelen mee naar surface-tinten. */
+  body.harv-dark .location,
+  body.harv-dark .tm-card,
+  body.harv-dark .quote-card { background: var(--c-surface); }
+  body.harv-dark .badge-strip > *,
+  body.harv-dark .usp { background: var(--c-surface-tint); }
+
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   /* Anker-scroll (CTA's + nav-links) landt onder de vaste mobiele mini-header,
@@ -272,13 +293,14 @@
   .spoed-badge .spoed-dot {
     width: 7px; height: 7px; border-radius: 999px;
     background: var(--c-accent);
-    box-shadow: 0 0 0 0 rgba(240,106,42,.5);
+    /* Gloed in de bedrijfskleur — de generator overschrijft --c-accent per lead. */
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--c-accent) 50%, transparent);
     animation: spoedPulse 2s ease-out infinite;
   }
   @keyframes spoedPulse {
-    0% { box-shadow: 0 0 0 0 rgba(240,106,42,.45); }
-    70% { box-shadow: 0 0 0 6px rgba(240,106,42,0); }
-    100% { box-shadow: 0 0 0 0 rgba(240,106,42,0); }
+    0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--c-accent) 45%, transparent); }
+    70% { box-shadow: 0 0 0 6px transparent; }
+    100% { box-shadow: 0 0 0 0 transparent; }
   }
   /* In nav: spoed line only renders text when spoed is active */
   .nav-phone .phone-spoed { display: none; }
@@ -1091,6 +1113,10 @@
     padding-bottom: 48px;
     border-bottom: 1px solid rgba(255,255,255,.1);
   }
+  /* In het telefoon-frame vuren media queries niet: 1 kolom afdwingen zodat
+     telefoonnummer/NAW nooit per woord afbreken (RULES 9). */
+  .is-framed .foot-top, body.preview-mobile .foot-top { grid-template-columns: 1fr !important; gap: 28px; }
+  .foot a[href^="tel:"] { white-space: nowrap; }
   .foot .logo { color: #fff; margin-bottom: 16px; display: inline-block; }
   .foot p.about {
     color: rgba(255,255,255,.65);
@@ -1246,11 +1272,9 @@
      430-grens meet de CONTENT-breedte (kaart - padding), dus 370 ≈ telefoon/iframe
      (~254px content) wél, desktop-kaart (~408px content) niet. */
   @container (max-width: 370px) {
-    .qw-chips { grid-template-columns: 1fr !important; gap: 7px; }
-    .qw-chip:last-child { grid-column: auto !important; }
-    .qw-chip { min-height: 0; padding: 10px 14px; gap: 10px; }
-    .qw-chip-ic { width: 20px; height: 20px; }
-    .qw-chip-ic svg { width: 18px; height: 18px; }
+    .qw-chip { min-height: 0; padding: 6px 12px 6px 8px; gap: 6px; }
+    .qw-chip-ic { width: 18px; height: 18px; }
+    .qw-chip-ic svg { width: 14px; height: 14px; }
   }
   /* On desktop, stretch the card so it visually aligns with the hero photo. */
   @media (min-width: 1001px) {
@@ -1325,39 +1349,32 @@
      (lage) tegels. Alléén op échte desktop (≥1001px) meerdere kolommen + hoger.
      Zo staan ze op telefoon, tablet én in de preview-iframe altijd onder elkaar,
      ongeacht hoe breed de iframe z'n viewport rapporteert. */
-  .qw-chips { display: grid; grid-template-columns: 1fr; gap: 7px; }
+  /* Compacte dienst-chips: kleine wrap-pills (gelijk aan template B) */
+  .qw-chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .qw-chip {
-    display: flex; align-items: center; gap: 10px;
-    padding: 11px 14px;
-    border-radius: 12px;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px 6px 8px;
+    border-radius: 999px;
     background: var(--c-surface-tint);
-    color: var(--c-ink);
-    font-size: 14px;
-    font-weight: 500;
+    color: var(--c-ink-soft);
+    font-size: 0.8rem;
+    font-weight: 600;
     text-align: left;
-    line-height: 1.25;
+    line-height: 1.2;
+    border: 1px solid transparent;
     min-width: 0; overflow-wrap: anywhere;
-    transition: background .15s, color .15s, box-shadow .15s;
+    transition: background .15s, color .15s, border-color .15s;
   }
   .qw-chip:hover { background: #e3e9f2; }
-  .qw-chip.is-on { background: var(--c-accent); color: #fff; box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--c-accent) 70%, transparent); }
-  .qw-chip-ic { width: 22px; height: 22px; flex: 0 0 auto; display: grid; place-items: center; }
-  .qw-chip-ic svg { width: 19px; height: 19px; }
-  /* Label mag krimpen én teruglopen binnen het vakje → tekst valt nooit buiten. */
+  .qw-chip.is-on { background: var(--c-accent); color: #fff; }
+  .qw-chip-ic { width: 18px; height: 18px; flex: 0 0 auto; display: grid; place-items: center; }
+  .qw-chip-ic svg { width: 14px; height: 14px; }
   .qw-chip-label { min-width: 0; overflow-wrap: anywhere; }
-  /* Desktop: ruimere, hogere tegels in meerdere kolommen. */
-  @media (min-width: 1001px) {
-    .qw-chips { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-    #quote-widget-mount-bottom .qw-chips { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .qw-chip { padding: 15px 16px; min-height: 60px; border-radius: 14px; gap: 11px; }
-    .qw-chip-ic { width: 24px; height: 24px; }
-    .qw-chip-ic svg { width: 21px; height: 21px; }
-  }
   /* Preview-iframe (is-framed): hoe dan ook 1 kolom + compact, ook als de iframe
      een brede viewport rapporteert (wint via !important). */
   .is-framed .qw-chips,
   .is-framed #quote-widget-mount-bottom .qw-chips { grid-template-columns: 1fr !important; }
-  .is-framed .qw-chip { min-height: 0 !important; padding: 10px 14px !important; }
+  .is-framed .qw-chip { min-height: 0 !important; padding: 6px 12px 6px 8px !important; }
   .qw-grid { display: grid; gap: 10px; }
   .qw-tile {
     position: relative;
@@ -1491,16 +1508,17 @@
     background: #16a34a;
     color: #fff;
     display: grid; place-items: center;
-    margin-bottom: 16px;
+    margin-bottom: 16px; position: relative;
     box-shadow: 0 10px 26px -8px rgba(22,163,74,.5);
-    animation: qwBounce .5s cubic-bezier(.4,1.6,.6,1);
+    animation: qwBounce .55s cubic-bezier(.22,1,.36,1) both;
   }
-  @keyframes qwBounce {
-    0% { transform: scale(0); }
-    70% { transform: scale(1.15); }
-    100% { transform: scale(1); }
+  .qw-done-ic::after {
+    content: ""; position: absolute; inset: -2px; border-radius: 999px;
+    border: 2px solid #16a34a; animation: qwDoneRing 1.9s ease-out infinite;
   }
-  .qw-done-ic svg { width: 30px; height: 30px; }
+  @keyframes qwBounce { 0% { transform: scale(0); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
+  @keyframes qwDoneRing { 0% { transform: scale(1); opacity: .55; } 100% { transform: scale(1.55); opacity: 0; } }
+  .qw-done-ic svg { width: 30px; height: 30px; position: relative; z-index: 1; }
   .qw-done-title { font-size: 22px; font-weight: 600; margin: 0 0 8px; color: var(--c-ink); }
   .qw-done-body { font-size: 14px; color: var(--c-ink-soft); margin: 0 0 18px; max-width: 320px; }
   .qw-summary { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
@@ -1746,7 +1764,7 @@
   .qb-lbl { display: block; font-size: 12.5px; font-weight: 600; color: var(--c-ink-soft); margin-bottom: 2px; }
   .qb-val { font-size: 16px; font-weight: 600; color: var(--c-ink); text-decoration: none; }
   a.qb-val:hover { color: var(--c-accent); }
-  .qb-spoed { margin-top: 24px; display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 14px; background: color-mix(in srgb, var(--c-accent) 8%, #fff); border: 1px solid color-mix(in srgb, var(--c-accent) 22%, transparent); }
+  .qb-spoed { margin-top: 24px; display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 14px; background: color-mix(in srgb, var(--c-accent) 8%, var(--c-surface)); border: 1px solid color-mix(in srgb, var(--c-accent) 22%, transparent); }
   .qb-spoed svg { flex: 0 0 auto; width: 22px; height: 22px; color: var(--c-accent); margin-top: 1px; }
   .qb-spoed p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--c-ink); }
   .quote-bottom-form { min-width: 0; }
@@ -1770,11 +1788,11 @@
     /* Lager (compacter) zodat 7 gestapelde tegels het formulier niet uitrekken. */
     .qw-chip {
       min-height: 0;
-      padding: 10px 14px;
-      gap: 10px;
+      padding: 6px 12px 6px 8px;
+      gap: 6px;
     }
-    .qw-chip-ic { width: 20px; height: 20px; }
-    .qw-chip-ic svg { width: 18px; height: 18px; }
+    .qw-chip-ic { width: 18px; height: 18px; }
+    .qw-chip-ic svg { width: 14px; height: 14px; }
   }
 
   /* ───── Hide dev Tweaks panel for a clean client landing ───── */
@@ -2047,13 +2065,15 @@
     .why-mosaic .img-slot:first-child { grid-row: auto; height: clamp(230px, 56vw, 320px); }
     .why-mosaic .img-slot:nth-child(n+2) { display: none; }
     .service-row {
-      grid-template-columns: 90px 1fr 44px;
-      gap: 14px;
+      /* Smallere foto/pijl-kolommen zodat de naam ("Dakvervanging") op één regel past. */
+      grid-template-columns: 78px 1fr 36px;
+      gap: 12px;
       padding: 14px;
     }
     .service-row p { display: none; }
     .service-row .img-slot { height: 80px; }
     .service-row h3 { font-size: 18px; }
+    .service-row .go { width: 36px; height: 36px; }
     .project { min-height: 260px; }
     .project-body { left: 22px; right: 22px; bottom: 22px; }
     .project-body h3 { font-size: 22px; }
@@ -2184,6 +2204,7 @@
     .location-pin,
     .sticky-cta.is-visible .sticky-quote,
     .qw-tagline-dot { animation: none !important; }
+    .qw-done-ic::after { display: none; }
     /* Reduced motion: crossfade only, no slide. Keep the centered/anchored
        resting transform so the bar doesn't jump on either layout. */
     .sticky-cta { transition: opacity .01s linear; }
@@ -2202,7 +2223,7 @@
      collapsing it. Test each field with its LONGEST realistic value at 390/1280.
      See v2/demo-generator/_shared.md rule 12. */
   .service-row h3, .step h4, .project-body h3, .member-body h4, .article-body h4 {
-    overflow-wrap: anywhere; text-wrap: balance;
+    overflow-wrap: anywhere; text-wrap: balance; hyphens: auto;
     display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden;
     -webkit-line-clamp: 2;
   }
@@ -2248,6 +2269,7 @@
 <style>
   /* ===== Ingebouwde device-preview (Desktop / Mobiel) ===== */
   .is-framed .devbar, .is-framed .devframe-overlay, .is-framed .harv-intro { display: none !important; }
+  body.dev-locked .devbar { display: none !important; }   /* in mobiele preview alleen "Terug naar desktop" */
   .devbar {
     position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
     z-index: 9000; display: inline-flex; align-items: center; gap: 2px;
@@ -2258,7 +2280,7 @@
   }
   .devbtn {
     appearance: none; border: 0; background: transparent; color: #c6cde0;
-    padding: 7px 15px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+    padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
     cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
     transition: color .18s ease, background .18s ease;
   }
@@ -2268,15 +2290,24 @@
   .devbtn:focus-visible { outline: 2px solid #ffb48c; outline-offset: 2px; }
   .devbar-tip {
     position: absolute; top: calc(100% + 11px); left: 50%; transform: translateX(-50%);
-    white-space: nowrap; background: var(--c-accent); color: #fff;
-    padding: 8px 14px; border-radius: 10px; font-size: 12.5px; font-weight: 600;
-    box-shadow: 0 12px 30px rgba(240,106,42,.4); pointer-events: none;
+    white-space: nowrap; color: #fff;
+    display: inline-flex; align-items: center; gap: 6px;
+    background: linear-gradient(180deg, color-mix(in oklch, var(--c-accent) 74%, transparent), color-mix(in oklch, var(--c-accent) 60%, transparent));
+    -webkit-backdrop-filter: blur(9px) saturate(1.3); backdrop-filter: blur(9px) saturate(1.3);
+    padding: 8px 15px; border-radius: 999px; font-size: 12.5px; font-weight: 700;
+    box-shadow: 0 10px 24px -6px color-mix(in oklch, var(--c-accent) 42%, transparent), inset 0 1px 0 rgba(255,255,255,.5); pointer-events: none;
   }
   .devbar-tip[hidden] { display: none; }
   .devbar-tip::before {
     content: ""; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
-    border: 6px solid transparent; border-bottom-color: var(--c-accent);
+    border: 6px solid transparent; border-bottom-color: color-mix(in oklch, var(--c-accent) 66%, transparent);
   }
+  .dt-ic { width: 14px; height: 14px; flex: none; }
+  /* Tag-varianten via ?tip=1|2|3 (2 = donker glas, default). */
+  .devbar-tip[data-v="2"] { color: #eaf1ff; background: linear-gradient(180deg, rgba(42,50,74,.72), rgba(22,28,44,.64)); box-shadow: 0 10px 26px -8px rgba(8,11,20,.5), inset 0 1px 0 rgba(255,255,255,.16); }
+  .devbar-tip[data-v="2"]::before { border-bottom-color: rgba(42,50,74,.72); }
+  .devbar-tip[data-v="3"] { color: #06180a; background: linear-gradient(180deg, color-mix(in oklch, #77fb38 92%, #fff), #77fb38); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: 0 10px 24px -6px rgba(119,251,56,.5), inset 0 1px 0 rgba(255,255,255,.6); }
+  .devbar-tip[data-v="3"]::before { border-bottom-color: #77fb38; }
   .devbar.nudge { animation: devShake 2.6s ease-in-out 2; }
   @keyframes devShake {
     0%, 86%, 100% { transform: translateX(-50%); }
@@ -2287,13 +2318,28 @@
   .devframe-overlay {
     position: fixed; inset: 0; z-index: 8990;
     background: rgba(8,11,20,.62); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
-    display: grid; grid-template-rows: 1fr auto; place-items: center; gap: 14px;
-    padding: 72px 16px 22px;
   }
   .devframe-overlay[hidden] { display: none; }
+  /* Doorzichtig "terug naar desktop"-pilletje bovenaan de mobiele preview */
+  .devframe-back {
+    position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 2;
+    appearance: none; cursor: pointer;
+    border: 1px solid rgba(255,255,255,.28);
+    background: rgba(255,255,255,.14); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    color: #fff; font-weight: 600; font-size: 12px;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 13px; border-radius: 999px;
+    transition: background .18s ease, border-color .18s ease;
+  }
+  .devframe-back:hover { background: rgba(255,255,255,.24); border-color: rgba(255,255,255,.46); }
+  .devframe-back svg { width: 13px; height: 13px; }
+  .devframe-back:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  /* Echte iPhone-viewport: het iframe is ALTIJD 390×844 (content) ongeacht zoom; het frame
+     schaalt alleen visueel om in beeld te passen via --devscale (door JS gezet). */
   .devframe {
-    position: relative; width: 390px; max-width: calc(100vw - 32px);
-    height: min(844px, calc(100vh - 150px));
+    position: absolute; top: 50%; left: 50%;
+    width: 410px; height: 864px;   /* border-box → 390×844 content */
+    transform: translate(-50%, -50%) scale(var(--devscale, 1)); transform-origin: center center;
     border: 10px solid #1b212c; border-radius: 46px; overflow: hidden;
     background: #fff; box-shadow: 0 40px 90px -30px rgba(0,0,0,.7), inset 0 0 0 1px #05070b;
   }
@@ -2302,13 +2348,9 @@
     width: 38%; height: 22px; background: #1b212c; border-radius: 0 0 14px 14px; z-index: 2;
   }
   .devframe iframe { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
-  .devframe-close {
-    appearance: none; border: 0; cursor: pointer;
-    background: rgba(255,255,255,.94); color: #15171f; font-weight: 600; font-size: 13px;
-    padding: 9px 18px; border-radius: 999px; box-shadow: 0 10px 28px rgba(0,0,0,.35);
-  }
-  .devframe-close:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
   body.dev-locked { overflow: hidden; }
+  body.dev-locked .devbar { display: none !important; }   /* in mobiele preview alleen "Terug naar desktop" */
+  .is-framed .harv-pop { display: none !important; }       /* pop-up niet IN de telefoon; top-level pop-up komt eroverheen */
   /* ===== Presented by Harv (rechtsonder; verborgen binnen het preview-iframe) ===== */
   .harv-badge {
     position: fixed; right: 18px; bottom: 18px; z-index: 70;
@@ -2337,6 +2379,106 @@
     .harv-float { right: 12px !important; bottom: 86px !important; max-width: 210px !important; }
   }
   @media (prefers-reduced-motion: reduce) { .harv-badge { transition: none; } }
+  /* ===== Harv conversie: mini-bubbel rechtsonder + pop-up modal (gifgroen/ink) ===== */
+  .hfc-btn {
+    position: relative; display: inline-flex; align-items: center; gap: 0.35rem;
+    background: none; border: 0; cursor: pointer; padding: 2px 0 6px;
+    color: #101314; font-weight: 700; font-size: 14px; line-height: 1.2; text-decoration: none;
+  }
+  .hfc-btn svg { width: 1.05em; height: 1.05em; flex: none; color: #77fb38; }
+  .hfc-btn svg path { stroke-width: 3; }
+  .hfc-btn::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; border-radius: 2px;
+    background: linear-gradient(90deg, #77fb38 0%, #77fb38 38%, #d6ffbe 50%, #77fb38 62%, #77fb38 100%);
+    background-size: 220% 100%; animation: hfcLine 2.2s linear infinite;
+  }
+  @keyframes hfcLine { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+
+  @property --hb-ang { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+  .harv-ring { position: relative; }
+  .harv-ring::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 2.5px;
+    background: conic-gradient(from var(--hb-ang), transparent 0deg 248deg, #2fbf1f 300deg, #77fb38 332deg, transparent 360deg);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
+    animation: hbSpin 3s linear infinite; pointer-events: none;
+  }
+  @keyframes hbSpin { to { --hb-ang: 360deg; } }
+
+  /* Mini-bubbel rechtsonder (altijd zichtbaar, directe link naar cal.com) */
+  .harv-mini {
+    position: fixed; right: 20px; bottom: 20px; z-index: 10070; cursor: pointer;
+    width: 252px; padding: 10px 14px; text-decoration: none;
+    display: flex; align-items: center; gap: 10px;
+    background: #fff; color: #101314; border: 1px solid rgba(16,19,20,.12); border-radius: 14px;
+    box-shadow: 0 16px 40px -18px rgba(16,19,20,.3); font-family: var(--font-sans, system-ui, sans-serif);
+    animation: hmIn .6s cubic-bezier(.16,1,.3,1) both;
+  }
+  .harv-mini:hover { box-shadow: 0 18px 46px -18px rgba(16,19,20,.42); }
+  .harv-mini .hm-by { margin: 0 0 1px; font-size: 12px; color: #5c625e; }
+  .harv-mini .hm-by b { color: #101314; }
+  .harv-mini .hm-txt { min-width: 0; }
+  /* Hoofdje van Nicolas — maakt elke Harv-message persoonlijk. */
+  .harv-face { width: 38px; height: 38px; border-radius: 999px; object-fit: cover; flex: none; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(16,19,20,.22); }
+  .harv-mini .harv-face { width: 36px; height: 36px; }
+  .harv-who { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; text-align: left; }
+  .harv-who .hw-name { display: block; font-weight: 700; color: #101314; font-size: 14px; line-height: 1.25; }
+  .harv-who .hw-sub { display: block; font-size: 12px; color: #5c625e; }
+  .harv-pop[data-variant="2"] .hw-name { color: #fff; }
+  .harv-pop[data-variant="2"] .hw-sub { color: #b9bfba; }
+  .harv-mini .hfc-btn { font-size: 14px; pointer-events: none; }
+  .harv-mini.is-hidden { opacity: 0; transform: translateY(14px) scale(.94); pointer-events: none; transition: opacity .3s cubic-bezier(.16,1,.3,1), transform .3s cubic-bezier(.16,1,.3,1); }
+  @keyframes hmIn { from { opacity: 0; transform: translateY(16px) scale(.95); } to { opacity: 1; transform: none; } }
+  .is-framed .harv-mini { display: none !important; }   /* niet ín de telefoon-preview; de top-level mini blijft rechtsonder staan */
+  @media (max-width: 760px) { .harv-mini { right: 12px; bottom: 84px; } }   /* op mobiel zichtbaar, boven de sticky-balk */
+
+  /* Pop-up modal (gecentreerd; klapt open vanuit / dicht naar de hoek) */
+  .harv-pop { position: fixed; inset: 0; z-index: 10090; display: none; }
+  .harv-pop.is-open, .harv-pop.is-closing { display: block; }
+  .harv-pop-backdrop { position: absolute; inset: 0; background: rgba(10,13,12,.55); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); opacity: 0; transition: opacity .42s cubic-bezier(.16,1,.3,1); }
+  .harv-pop.is-open .harv-pop-backdrop { opacity: 1; }
+  .harv-pop.is-closing .harv-pop-backdrop { opacity: 0; }
+  .harv-pop-card {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: min(440px, calc(100vw - 32px)); padding: 30px 30px 28px; overflow: hidden;
+    background: #fff; color: #101314; border: 2px solid #2fbf1f; border-radius: 20px;
+    box-shadow: 0 36px 80px -26px rgba(10,13,12,.65); font-family: var(--font-sans, system-ui, sans-serif);
+  }
+  .harv-pop.is-open .harv-pop-card { animation: hpExpand .5s cubic-bezier(.16,1,.3,1) both; }
+  .harv-pop.is-closing .harv-pop-card { animation: hpCollapse .42s cubic-bezier(.6,0,.85,.25) both; }
+  @keyframes hpExpand { from { opacity: .25; transform: translate(calc(-50% + 34vw), calc(-50% + 32vh)) scale(.3); } to { opacity: 1; transform: translate(-50%,-50%) scale(1); } }
+  @keyframes hpCollapse { from { opacity: 1; transform: translate(-50%,-50%) scale(1); } to { opacity: 0; transform: translate(calc(-50% + 34vw), calc(-50% + 32vh)) scale(.3); } }
+  .harv-pop-x { position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; z-index: 3; display: grid; place-items: center; border: 0; border-radius: 999px; background: rgba(16,19,20,.06); color: #5c625e; cursor: pointer; }
+  .harv-pop-x:hover { background: rgba(16,19,20,.12); color: #101314; }
+  .harv-pop-x svg { width: 16px; height: 16px; }
+  .harv-pop-kicker { margin: 0 0 8px; font-size: 12.5px; font-weight: 600; color: #5c625e; }
+  .harv-pop-title { margin: 0; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.025em; line-height: 1.12; color: #101314; text-wrap: balance; }
+  .harv-pop-body { margin: 10px 0 0; font-size: 1rem; color: #5c625e; line-height: 1.5; }
+  .harv-pop-btn {
+    margin-top: 18px; display: inline-flex; align-items: center; gap: 9px;
+    background: #77fb38; color: #06180a; font-weight: 800; font-size: 1.02rem;
+    padding: 10px 20px; border-radius: 11px; text-decoration: none;
+    position: relative; overflow: hidden; animation: hpBtnPulse 2.6s ease-in-out infinite;
+  }
+  .harv-pop-btn svg { width: 1.05em; height: 1.05em; color: #06180a; flex: none; }
+  .harv-pop-btn svg path { stroke-width: 2.6; }
+  .harv-pop-btn::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 45%; background: linear-gradient(100deg, transparent, rgba(255,255,255,.7), transparent); transform: translateX(-180%) skewX(-18deg); animation: hpBtnShine 3s ease-in-out infinite; }
+  .harv-pop-btn:hover { background: #9bff5c; }
+  @keyframes hpBtnPulse { 0%,100% { box-shadow: 0 4px 16px rgba(119,251,56,.4); transform: scale(1); } 50% { box-shadow: 0 8px 26px rgba(119,251,56,.7); transform: scale(1.04); } }
+  @keyframes hpBtnShine { 0% { transform: translateX(-180%) skewX(-18deg); } 55%,100% { transform: translateX(420%) skewX(-18deg); } }
+  .harv-pop[data-variant="2"] .harv-pop-card { background: #101314; color: #f3f5f2; }
+  .harv-pop[data-variant="2"] .harv-pop-title { color: #fff; }
+  .harv-pop[data-variant="2"] .harv-pop-kicker, .harv-pop[data-variant="2"] .harv-pop-body { color: #b9bfba; }
+  .harv-pop[data-variant="2"] .harv-pop-x { background: rgba(255,255,255,.1); color: #c4c9c5; }
+  .harv-pop[data-variant="2"] .harv-pop-x:hover { background: rgba(255,255,255,.2); color: #fff; }
+  .harv-pop[data-variant="3"] .harv-pop-card { background: #f3fbef; }
+  @media (max-width: 520px) { .harv-pop-card { padding: 26px 22px 24px; } .harv-pop-title { font-size: 1.32rem; } }
+  @media (prefers-reduced-motion: reduce) {
+    .harv-ring::before { animation: none !important; }
+    .harv-pop-card, .harv-pop-backdrop, .harv-pop-btn, .harv-mini { animation: none !important; transition: none !important; }
+    .harv-pop-btn::after { display: none; }
+    .hfc-btn::after { animation: none !important; }
+  }
   @media (max-width: 760px) {
     .devbar, .devframe-overlay { display: none !important; }
   }
@@ -2362,14 +2504,130 @@
   <span class="devbar-tip" id="devbarTip" hidden>Bekijk ook de mobiele versie</span>
 </div>
 <div class="devframe-overlay" id="devOverlay" hidden>
+  <button type="button" class="devframe-back" id="devClose">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="4" width="19" height="13" rx="2" stroke="currentColor" stroke-width="2"/><path d="M9 21h6M12 17v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    Terug naar desktop
+  </button>
   <div class="devframe">
     <span class="devframe-notch" aria-hidden="true"></span>
     <iframe id="devIframe" title="Mobiele weergave van deze pagina"></iframe>
   </div>
-  <button type="button" class="devframe-close" id="devClose">Terug naar desktop</button>
 </div>
-{{HARV_PRESENTED_BY}}
-{{TRACKING_PIXEL}}
+<!-- Harv: vaste mini-bubbel rechtsonder (directe link) + conversie-modal. Stijl-variant via ?popup=1|2|3.
+     Modal opent na ~60s of zodra de boekingssectie in beeld komt; sluiten klapt 'm terug naar de hoek. -->
+<a class="harv-mini" id="harvMini" href="https://cal.com/harv-agency/20min.nicolas" target="_blank" rel="noopener" aria-label="Plan een gesprek met Nicolas van Harv Agency">
+  <img class="harv-face" src="../assets/nico.jpg" alt="" aria-hidden="true">
+  <span class="hm-txt">
+    <p class="hm-by"><b>Nicolas</b> van Harv Agency</p>
+    <span class="hfc-btn">Plan een gesprek
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+  </span>
+</a>
+<div class="harv-pop" id="harvPop" hidden>
+  <div class="harv-pop-backdrop" data-pop-close></div>
+  <div class="harv-pop-card harv-ring" role="dialog" aria-modal="true" aria-label="Plan een gesprek met Harv Agency">
+    <button class="harv-pop-x" type="button" aria-label="Sluiten" data-pop-close>
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+    </button>
+    <div class="harv-who">
+      <img class="harv-face" src="../assets/nico.jpg" alt="Nicolas van Harv Agency">
+      <span><span class="hw-name">Nicolas</span><span class="hw-sub">Harv Agency</span></span>
+    </div>
+    <h3 class="harv-pop-title">Ook zo&rsquo;n premium site, maar zonder het premium prijskaartje?</h3>
+    <p class="harv-pop-body">Laat Harv &rsquo;m voor u bouwen. Plan een vrijblijvend gesprek van 20 minuten, dan laten we zien wat er mogelijk is.</p>
+    <a class="harv-pop-btn" href="https://cal.com/harv-agency/20min.nicolas" target="_blank" rel="noopener">
+      Plan een gesprek
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </div>
+</div>
+<script>
+(function () {
+  var mini = document.getElementById('harvMini');
+  var pop  = document.getElementById('harvPop');
+  if (!mini || !pop) return;
+  var v = (new URLSearchParams(location.search).get('popup') || '1');
+  if (!/^[123]$/.test(v)) v = '1';
+  pop.setAttribute('data-variant', v);
+  var isOpen = false, autoDone = false, card = pop.querySelector('.harv-pop-card');
+  function open() {
+    if (isOpen) return; isOpen = true; autoDone = true;
+    mini.classList.add('is-hidden');
+    pop.classList.remove('is-closing'); pop.hidden = false;
+    requestAnimationFrame(function () { pop.classList.add('is-open'); });
+  }
+  function close() {
+    if (!isOpen) return; isOpen = false;
+    pop.classList.remove('is-open'); pop.classList.add('is-closing');
+    var done = function () { if (pop.hidden) return; pop.classList.remove('is-closing'); pop.hidden = true; mini.classList.remove('is-hidden'); };
+    card.addEventListener('animationend', done, { once: true });
+    setTimeout(done, 520);
+  }
+  pop.querySelectorAll('[data-pop-close]').forEach(function (el) { el.addEventListener('click', close); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && isOpen) close(); });
+  setTimeout(function () { if (!autoDone) open(); }, 60000);
+  /* De footer staat verderop in de DOM dan dit script — pas opzoeken zodra de pagina geparsed is,
+     anders is de anchor null en vuurt de pop-up nooit bij scrollen naar onderen. */
+  function watchFooter() {
+    var anchor = document.querySelector('footer, .footer, .foot') || document.getElementById('quote-bottom');
+    if (!anchor || !('IntersectionObserver' in window)) return;
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (en) { if (en.isIntersecting && !autoDone) { open(); io.disconnect(); } });
+    }, { rootMargin: '0px 0px -12% 0px', threshold: 0.01 });
+    io.observe(anchor);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watchFooter);
+  else watchFooter();
+})();
+</script>
+<!-- "Voorproefje"-pop-up: verschijnt als iemand op een pijltje (.go) klikt dat naar een
+     niet-gebouwde pagina zou wijzen. -->
+<div class="harv-pop" id="harvPreview" data-variant="1" hidden>
+  <div class="harv-pop-backdrop" data-prev-close></div>
+  <div class="harv-pop-card harv-ring" role="dialog" aria-modal="true" aria-label="Voorproefje">
+    <button class="harv-pop-x" type="button" aria-label="Sluiten" data-prev-close>
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+    </button>
+    <div class="harv-who">
+      <img class="harv-face" src="../assets/nico.jpg" alt="Nicolas van Harv Agency">
+      <span><span class="hw-name">Nicolas</span><span class="hw-sub">Harv Agency</span></span>
+    </div>
+    <h3 class="harv-pop-title">Dit is een voorproefje ;)</h3>
+    <p class="harv-pop-body">We hebben alleen een voorproefje van de homepagina gemaakt. Plan een gesprek in als het je bevalt.</p>
+    <a class="harv-pop-btn" href="https://cal.com/harv-agency/20min.nicolas" target="_blank" rel="noopener">
+      Plan een gesprek
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </div>
+</div>
+<script>
+(function () {
+  var prev = document.getElementById('harvPreview'); if (!prev) return;
+  var card = prev.querySelector('.harv-pop-card'); var open = false;
+  function openP() { if (open) return; open = true; prev.classList.remove('is-closing'); prev.hidden = false; requestAnimationFrame(function(){ prev.classList.add('is-open'); }); }
+  function closeP() { if (!open) return; open = false; prev.classList.remove('is-open'); prev.classList.add('is-closing'); var done = function(){ if (prev.hidden) return; prev.classList.remove('is-closing'); prev.hidden = true; }; card.addEventListener('animationend', done, { once: true }); setTimeout(done, 520); }
+  prev.querySelectorAll('[data-prev-close]').forEach(function (el) { el.addEventListener('click', closeP); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && open) closeP(); });
+  /* Onderschep klikken op dingen die eruitzien alsof ze ergens heen gaan maar (nog) niet gebouwd zijn:
+     pijltjes (.go), content-kaarten (artikelen/projecten/teamleden) én dode links — alles in CAPTURE
+     vóór de link navigeert. De nav-bar wordt met rust gelaten; échte links (tel/mail/extern/cal.com)
+     en ankers naar een bestaande sectie blijven gewoon werken. */
+  document.addEventListener('click', function (e) {
+    var t = e.target; if (!t.closest) return;
+    if (t.closest('.go, .article, .project, .member')) { e.preventDefault(); e.stopPropagation(); openP(); return; }
+    var a = t.closest('a');
+    if (a && !a.closest('.nav, .mmh-menu, .mmh-links')) {
+      var href = a.getAttribute('href') || '';
+      if (/^(tel:|mailto:|https?:)/i.test(href)) return;                                  // echte/externe link
+      if (href.charAt(0) === '#' && href.length > 1 && document.getElementById(href.slice(1))) return; // bestaande sectie → scroll
+      e.preventDefault(); e.stopPropagation(); openP();                                    // dode link → voorproefje
+    }
+  }, true);
+})();
+</script>
+<!-- Tracking-pixel (door de generator gevuld); off-screen zodat de kale placeholder niet zichtbaar is. -->
+<div aria-hidden="true" style="position:absolute;left:-9999px;top:0;width:1px;height:1px;overflow:hidden">{{TRACKING_PIXEL}}</div>
 <script>
 (function () {
   if (window.self !== window.top) return;        /* nooit tonen binnen het preview-iframe */
@@ -2377,20 +2635,29 @@
   var overlay = document.getElementById('devOverlay');
   var iframe = document.getElementById('devIframe');
   var tip = document.getElementById('devbarTip');
+  var tv = (new URLSearchParams(location.search).get('tip') || '2'); if (!/^[123]$/.test(tv)) tv = '2';
+  tip.setAttribute('data-v', tv);
   var btns = bar.querySelectorAll('.devbtn');
   var closeBtn = document.getElementById('devClose');
   var used = false;
   function hideTip() { tip.hidden = true; bar.classList.remove('nudge'); }
+  function fitFrame() {
+    var f = document.querySelector('.devframe'); if (!f) return;
+    var s = Math.min(1, (window.innerHeight - 92) / 864, (window.innerWidth - 24) / 410);
+    f.style.setProperty('--devscale', (s > 0.2 ? s : 0.2).toFixed(3));
+  }
   function setMode(mobile) {
     used = true; hideTip();
     if (mobile && !iframe.src) iframe.src = location.pathname + '?preview=' + Date.now();
     overlay.hidden = !mobile;
     document.body.classList.toggle('dev-locked', mobile);
+    if (mobile) fitFrame();
     btns.forEach(function (b) { b.setAttribute('aria-pressed', String((b.dataset.mode === 'mobile') === mobile)); });
   }
   btns.forEach(function (b) { b.addEventListener('click', function () { setMode(b.dataset.mode === 'mobile'); }); });
   closeBtn.addEventListener('click', function () { setMode(false); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !overlay.hidden) setMode(false); });
+  window.addEventListener('resize', function () { if (!overlay.hidden) fitFrame(); });
   /* Nudge: na 30s zonder gebruik, of zodra je de projecten-sectie bereikt. */
   function nudge() { if (used) return; tip.hidden = false; bar.classList.add('nudge'); }
   setTimeout(nudge, 30000);
@@ -3661,8 +3928,8 @@
   if (_set) window.__tplSet = function (p) { var r = _set(p); setTimeout(fit, 0); return r; };
 })();
 </script>
-<script>window.__qwEngageFirst = true;</script>
-<script type="text/babel" src="quote-widget.jsx"></script>
+<script>window.__qwCombinedContact = true;</script>
+<script type="text/babel" src="../quote-widget.jsx"></script>
 
 </body>
 </html>

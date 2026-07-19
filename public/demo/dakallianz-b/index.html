@@ -276,6 +276,8 @@ button { font-family: inherit; cursor: pointer; }
   padding: 0.4rem 0.8rem 0.4rem 0.6rem; border-radius: 9px;
   font-weight: 700; font-size: 0.85rem; letter-spacing: -0.005em;
 }
+/* Badge alleen tonen als er echt iets staat (bv. "24/7 bereikbaar"); leeg = weg. */
+.hero-badge:has(.hero-badge-txt:empty) { display: none; }
 .hero-badge .dot {
   width: 8px; height: 8px; border-radius: 50%; background: var(--ok);
   box-shadow: 0 0 0 4px oklch(0.62 0.13 155 / 0.18);
@@ -954,27 +956,10 @@ button { font-family: inherit; cursor: pointer; }
   }
   .devframe-close:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
   body.dev-locked { overflow: hidden; }
-  /* ===== Presented by Harv (rechtsonder; verborgen binnen het preview-iframe) ===== */
-  .harv-badge {
-    position: fixed; right: 18px; bottom: 18px; z-index: 70;
-    display: inline-flex; align-items: center; gap: 11px;
-    padding: 9px 15px; border-radius: 14px; text-decoration: none;
-    background: #fff; border: 1px solid #ece8fb;
-    box-shadow: 0 12px 30px -10px rgba(73,40,253,.35);
-    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
-    transition: transform .2s ease, box-shadow .2s ease;
-  }
-  .harv-badge:hover { transform: translateY(-2px); box-shadow: 0 18px 38px -12px rgba(73,40,253,.5); }
-  .harv-badge:focus-visible { outline: 2px solid #4928fd; outline-offset: 2px; }
-  .harv-badge .hb-mark { width: 26px; height: 26px; flex: none; border-radius: 7px; background: #4928fd; color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 13px; }
-  .harv-badge .hb-txt { display: flex; flex-direction: column; line-height: 1.25; text-align: left; }
-  .harv-badge .hb-l1 { font-size: 12.5px; font-weight: 600; color: #1b1340; }
-  .harv-badge .hb-l2 { font-size: 12.5px; font-weight: 700; color: #4928fd; display: inline-flex; align-items: center; gap: 4px; }
-  .harv-badge .hb-l2 svg { width: 12px; height: 12px; }
-  .is-framed .harv-badge { display: none !important; }
-  @media (prefers-reduced-motion: reduce) { .harv-badge { transition: none; } }
+  /* Helders eigen .harv-badge is verwijderd: "Presented by Harv" komt nu alleen
+     uit de generator-bubbel (<div class="harv-float" style="position:fixed;right:18px;bottom:18px;z-index:99999;background:#fff;border:1px solid #ececec;border-radius:16px;box-shadow:0 12px 34px rgba(0,0,0,.16);padding:13px 16px;max-width:240px;font-family:'Inter Tight',system-ui,-apple-system,sans-serif"><div style="font-size:13px;color:#555;margin-bottom:10px">Presented by <strong style="color:#111">Harv Agency</strong></div><a href="https://cal.com/harv-agency/20min.nicolas?notion_id=36f45ad1-eeb2-8199-aab7-f8e0b15e33ba&amp;name=Dakallianss&amp;email=info%40dakallianz.nl" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#fff;background:#4928FD;border-radius:999px;padding:9px 15px;text-decoration:none;white-space:nowrap">Plan een kennismaking &#8599;</a></div>, rechtsonder). */
   @media (max-width: 760px) {
-    .devbar, .devframe-overlay, .harv-badge { display: none !important; }
+    .devbar, .devframe-overlay { display: none !important; }
   }
   @media (prefers-reduced-motion: reduce) {
     .devbar.nudge { animation: none; }
@@ -994,7 +979,7 @@ button { font-family: inherit; cursor: pointer; }
     .mobile-mini-header { transition: none !important; }
   }
 </style>
-<style id="harv-brand">:root{--c-accent:#007bff !important;--c-accent-soft:#d8ebff !important;--c-dark:#00336b !important;--c-dark-soft:#1e4b7c !important;}</style><style id="harv-tweaks">#about{padding-bottom:36px}.why-left h2{margin-bottom:24px}.why-list{gap:2px}.why-item{padding:14px 0}.process-head{margin-bottom:26px}.tm-head{align-items:center}.harv-mobilebar{display:none;position:sticky;bottom:0;z-index:9000;gap:10px;padding:10px 14px;background:rgba(255,255,255,.96);border-top:1px solid var(--c-line);box-shadow:0 -6px 20px rgba(0,0,0,.10)}.harv-mobilebar a{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;font-weight:700;font-size:15px;text-decoration:none;height:50px}.harv-mobilebar .harv-mb-phone{width:50px;flex:0 0 50px;background:var(--c-accent);color:#fff}.harv-mobilebar .harv-mb-quote{flex:1;background:var(--c-dark);color:#fff}body.preview-mobile.harv-intro-done .harv-mobilebar{display:flex}body.preview-mobile .sticky-cta{display:none}@media(max-width:759px){body.harv-intro-done .harv-mobilebar{display:flex}.sticky-cta{display:none}}body.preview-mobile .page{padding-bottom:0}@media(min-width:760px){body:not(.preview-mobile) .process-grid{grid-template-columns:repeat(3,1fr)}body:not(.preview-mobile) .tm-grid{grid-template-columns:repeat(1,1fr)}body:not(.preview-mobile) .stats{grid-template-columns:repeat(3,1fr)}body:not(.preview-mobile) .why-right{padding-top:92px}}body.preview-mobile .process-grid{grid-template-columns:1fr}body.preview-mobile .tm-grid{grid-template-columns:1fr}body.preview-mobile .stats{grid-template-columns:repeat(3,1fr)}@media(max-width:759px){.process-grid{grid-template-columns:1fr}.tm-grid{grid-template-columns:1fr}}</style></head>
+<style id="harv-brand">:root{--c-accent:#007bff !important;--c-accent-soft:#d8ebff !important;--c-dark:#00336b !important;--c-dark-soft:#1e4b7c !important;}</style><style id="harv-tweaks">#about{padding-bottom:36px}.why-left h2{margin-bottom:24px}.why-list{gap:2px}.why-item{padding:14px 0}.process-head{margin-bottom:26px}.tm-head{align-items:center}.harv-mobilebar{display:none;position:sticky;bottom:0;z-index:9000;gap:10px;padding:10px 14px;background:rgba(255,255,255,.96);border-top:1px solid var(--c-line);box-shadow:0 -6px 20px rgba(0,0,0,.10)}.harv-mobilebar a{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;font-weight:700;font-size:15px;text-decoration:none;height:50px}.harv-mobilebar .harv-mb-phone{width:50px;flex:0 0 50px;background:var(--c-accent);color:#fff}.harv-mobilebar .harv-mb-quote{flex:1;background:var(--c-dark);color:#fff}body.preview-mobile.harv-intro-done .harv-mobilebar{display:flex}body.preview-mobile .sticky-cta{display:none}@media(max-width:759px){body.harv-intro-done .harv-mobilebar{display:flex}.sticky-cta{display:none}}body.preview-mobile .page{padding-bottom:0}@media(min-width:760px){body:not(.preview-mobile) .process-grid{grid-template-columns:repeat(4,1fr)}body:not(.preview-mobile) .tm-grid{grid-template-columns:repeat(1,1fr)}body:not(.preview-mobile) .stats{grid-template-columns:repeat(4,1fr)}body:not(.preview-mobile) .why-right{padding-top:92px}}body.preview-mobile .process-grid{grid-template-columns:1fr}body.preview-mobile .tm-grid{grid-template-columns:1fr}body.preview-mobile .stats{grid-template-columns:repeat(3,1fr)}@media(max-width:759px){.process-grid{grid-template-columns:1fr}.tm-grid{grid-template-columns:1fr}}</style></head>
 <body>
 <!--
   TODO TPL-B (generator-fit notes): helder is data-fillable via the #template-data JSON,
@@ -1031,13 +1016,9 @@ button { font-family: inherit; cursor: pointer; }
 </div>
 <button class="devframe-close" id="devClose" type="button">Terug naar desktop</button>
 </div>
-<a aria-label="Gemaakt door Harv Agency, plan een kennismaking" class="harv-badge" href="https://cal.com/harv-agency/20min.nicolas" rel="noopener" target="_blank">
-<span aria-hidden="true" class="hb-mark">H</span>
-<span class="hb-txt">
-<span class="hb-l1">Gemaakt door Harv Agency</span>
-<span class="hb-l2">Plan een kennismaking <svg aria-hidden="true" fill="none" viewbox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"></path></svg></span>
-</span>
-</a>
+<!-- "Presented by Harv" = ALLEEN de per-lead bubbel die de generator injecteert
+     via <div class="harv-float" style="position:fixed;right:18px;bottom:18px;z-index:99999;background:#fff;border:1px solid #ececec;border-radius:16px;box-shadow:0 12px 34px rgba(0,0,0,.16);padding:13px 16px;max-width:240px;font-family:'Inter Tight',system-ui,-apple-system,sans-serif"><div style="font-size:13px;color:#555;margin-bottom:10px">Presented by <strong style="color:#111">Harv Agency</strong></div><a href="https://cal.com/harv-agency/20min.nicolas?notion_id=36f45ad1-eeb2-8199-aab7-f8e0b15e33ba&amp;name=Dakallianss&amp;email=info%40dakallianz.nl" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#fff;background:#4928FD;border-radius:999px;padding:9px 15px;text-decoration:none;white-space:nowrap">Plan een kennismaking &#8599;</a></div> (rechtsonder, alle viewports). Helders eigen
+     .harv-badge is verwijderd om dubbele/mobiele Harv-knoppen te voorkomen. -->
 <script>
 (function () {
   if (window.self !== window.top) return;        /* nooit tonen binnen het preview-iframe */
@@ -1277,7 +1258,7 @@ button { font-family: inherit; cursor: pointer; }
 <section class="hero">
 <div class="wrap hero-grid">
 <div class="hero-copy">
-<span class="hero-badge"><span aria-hidden="true" class="dot"></span><span data-tpl="HERO_BADGE">Dakdekker in Den Haag</span></span>
+<span class="hero-badge"><span aria-hidden="true" class="dot"></span><span class="hero-badge-txt" data-tpl="HERO_BADGE">24/7 bereikbaar</span></span>
 <h1>Vakwerk voor uw dak <span class="em">in <span data-tpl="CITY">Den Haag</span></span></h1>
 <p class="hero-sub" data-tpl="HERO_SUB">Van lekkage en reparatie tot een compleet nieuw dak: vakkundig werk en een vrijblijvende offerte.</p>
 <div class="hero-actions">
@@ -1389,7 +1370,7 @@ button { font-family: inherit; cursor: pointer; }
 <div class="step-img"><img alt="Klant vraagt telefonisch een offerte aan" decoding="async" loading="lazy" src="../assets/step-1.jpg"/></div>
 <span class="step-n mono">1</span>
 <h3 data-tpl="STEP_1_TITLE">Neem Contact Op</h3>
-<p data-tpl="STEP_1_BODY">Eenvoudig contact opnemen via telefoon, e-mail of ons online formulier.</p>
+<p data-tpl="STEP_1_BODY">Eenvoudig contact opnemen via telefoon, e-mail of online formulier.</p>
 <span class="step-time"><svg aria-hidden="true" fill="none" viewbox="0 0 24 24"><path d="M5 12l5 5L20 6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"></path></svg>Zelfde dag contact</span>
 </li>
 <li class="step">
@@ -1406,7 +1387,13 @@ button { font-family: inherit; cursor: pointer; }
 <p data-tpl="STEP_3_BODY">Onze experts voeren de benodigde werkzaamheden snel en professioneel uit.</p>
 <span class="step-time"><svg aria-hidden="true" fill="none" viewbox="0 0 24 24"><path d="M3 21h18M5 21V10l7-5 7 5v11" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>Op afspraak</span>
 </li>
-
+<li class="step">
+<div class="step-img"><img alt="Opgeleverd dak, schoon en netjes afgewerkt" decoding="async" loading="lazy" src="../assets/step-4.jpg"/></div>
+<span class="step-n mono">4</span>
+<h3 data-tpl="STEP_4_TITLE">Offerte opvragen</h3>
+<p data-tpl="STEP_4_BODY">U ontvangt een helder overzicht van de kosten en werkzaamheden.</p>
+<span class="step-time"><svg aria-hidden="true" fill="none" viewbox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 7.5 8 9 4.5-1.5 8-4 8-9V6l-8-3Z" stroke="currentColor" stroke-linejoin="round" stroke-width="2"></path></svg>10 jaar zekerheid</span>
+</li>
 </ol>
 </div>
 </section>
@@ -1422,19 +1409,19 @@ button { font-family: inherit; cursor: pointer; }
 <div class="why-reasons reveal-stagger">
 <div class="why-reason">
 <span aria-hidden="true" class="why-ic"><svg fill="none" viewbox="0 0 24 24"><path d="M16 3a4 4 0 0 1 0 8M3 21v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"></circle></svg></span>
-<div><h3 data-tpl="WHY_1_TITLE">24/7 Spoedservice</h3><p data-tpl="WHY_1_BODY">Bij noodgevallen kunt u altijd op ons rekenen voor directe probleemoplossing.</p></div>
+<div><h3 data-tpl="WHY_1_TITLE">Duurzame Materialen</h3><p data-tpl="WHY_1_BODY">We gebruiken uitsluitend milieuvriendelijke en duurzame materialen.</p></div>
 </div>
 <div class="why-reason">
 <span aria-hidden="true" class="why-ic"><svg fill="none" viewbox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 7.5 8 9 4.5-1.5 8-4 8-9V6l-8-3Z" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8"></path><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg></span>
-<div><h3 data-tpl="WHY_2_TITLE">Duurzame Materialen</h3><p data-tpl="WHY_2_BODY">We gebruiken uitsluitend milieuvriendelijke en duurzame materialen voor uw dak.</p></div>
+<div><h3 data-tpl="WHY_2_TITLE">Gecertificeerde Vakmanschap</h3><p data-tpl="WHY_2_BODY">Ons team bestaat uit gecertificeerde dakdekkers met jarenlange ervaring.</p></div>
 </div>
 <div class="why-reason">
 <span aria-hidden="true" class="why-ic"><svg fill="none" viewbox="0 0 24 24"><path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4L4.2 7.7l5.4-.8L12 2Z" stroke="currentColor" stroke-linejoin="round" stroke-width="1.6"></path></svg></span>
-<div><h3 data-tpl="WHY_3_TITLE">Gecertificeerde Vakmensen</h3><p data-tpl="WHY_3_BODY">Ons team van gecertificeerde dakdekkers levert vakmanschap van het hoogste niveau.</p></div>
+<div><h3 data-tpl="WHY_3_TITLE">Alles-in-één Partner</h3><p data-tpl="WHY_3_BODY">Van inspectie tot complete renovaties, we bieden totaaloplossingen.</p></div>
 </div>
 <div class="why-reason">
 <span aria-hidden="true" class="why-ic"><svg fill="none" viewbox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8"></path></svg></span>
-<div><h3 data-tpl="WHY_4_TITLE">Alles-in-één Partner</h3><p data-tpl="WHY_4_BODY">Van inspectie tot complete renovaties, wij bieden totaaloplossing voor uw dakbehoeften.</p></div>
+<div><h3 data-tpl="WHY_4_TITLE">Persoonlijk contact</h3><p data-tpl="WHY_4_BODY">Korte lijnen en heldere communicatie van begin tot eind.</p></div>
 </div>
 </div>
 </div>
@@ -1455,10 +1442,10 @@ button { font-family: inherit; cursor: pointer; }
 </div>
 <!-- 'stats' = generator's stats-grid hook; each '.stat' carries data-stat="N" -->
 <div class="stat-row stats reveal-stagger" id="statRow">
-<div class="stat" data-stat="1"><div class="num"><span class="count" data-to="20" data-tpl="STAT_1_VALUE">23+</span><span class="suf">+</span></div><div class="lbl" data-tpl="STAT_1_LABEL">Jaar Ervaring</div></div>
-<div class="stat" data-stat="2"><div class="num"><span class="count" data-decimal="" data-to="4,9" data-tpl="STAT_2_VALUE">9.9</span></div><div class="lbl" data-tpl="STAT_2_LABEL">Beoordeling op</div></div>
-<div class="stat" data-stat="3"><div class="num"><span class="count" data-to="3.000" data-tpl="STAT_3_VALUE">4.8</span><span class="suf">+</span></div><div class="lbl" data-tpl="STAT_3_LABEL">Beoordeling op</div></div>
-
+<div class="stat" data-stat="1"><div class="num"><span class="count" data-to="20" data-tpl="STAT_1_VALUE">23+</span><span class="suf">+</span></div><div class="lbl" data-tpl="STAT_1_LABEL">Jaar ervaring</div></div>
+<div class="stat" data-stat="2"><div class="num"><span class="count" data-decimal="" data-to="4,9" data-tpl="STAT_2_VALUE">Den Haag</span></div><div class="lbl" data-tpl="STAT_2_LABEL">Werkgebied</div></div>
+<div class="stat" data-stat="3"><div class="num"><span class="count" data-to="3.000" data-tpl="STAT_3_VALUE">24/7</span><span class="suf">+</span></div><div class="lbl" data-tpl="STAT_3_LABEL">Bereikbaar bij spoed</div></div>
+<div class="stat" data-stat="4"><div class="num"><span class="count-static" data-tpl="STAT_4_VALUE">Gratis</span></div><div class="lbl" data-tpl="STAT_4_LABEL">Offerte &amp; inspectie</div></div>
 </div>
 </div>
 </section>
@@ -1942,7 +1929,7 @@ button { font-family: inherit; cursor: pointer; }
   "NAV_PROJECTS": "Projecten",
   "NAV_CONTACT": "Contact",
   "CTA_QUOTE": "Offerteaanvraag",
-  "HERO_BADGE": "Dakdekker in Den Haag",
+  "HERO_BADGE": "24/7 bereikbaar",
   "HERO_TITLE_LINE_1": "Vakwerk voor elk",
   "HERO_TITLE_LINE_2": "dak boven uw hoofd",
   "CITY": "Den Haag",
@@ -1962,7 +1949,7 @@ button { font-family: inherit; cursor: pointer; }
   "ABOUT_TITLE_1": "Uw vertrouwde",
   "ABOUT_TITLE_ACCENT": "dakdekker",
   "ABOUT_TITLE_2": "in Den Haag",
-  "ABOUT_BODY": "Dak Allianz is een betrouwbare dakbedekkingspartner met meer dan 20 jaar ervaring die professionele diensten aanbiedt voor particulieren en bedrijven. Het bedrijf werkt met gecertificeerde vakmensen en duurzame materialen, met focus op klanttevredenheid en maatwerkoplossingen.",
+  "ABOUT_BODY": "Dak Allianz is een full-service dakbedekkingsbedrijf met meer dan 20 jaar ervaring in de dakdekkingsbranche. Het bedrijf biedt oplossingen op maat voor particulieren, bedrijven en VVE's in onder andere Amsterdam, Utrecht, Rotterdam, Den Haag en omgeving, met gekwalificeerde en gecertificeerde vakmensen die met duurzame materialen werken.",
   "ABOUT_CTA_PRIMARY": "Meer over ons",
   "ABOUT_CALLBACK": "Vraag terugbelverzoek aan",
   "WHY_EYEBROW": "Waarom ons",
@@ -2028,37 +2015,37 @@ button { font-family: inherit; cursor: pointer; }
   "SHOW_WHY": true,
   "SHOW_TEAM": true,
   "STAT_1_VALUE": "23+",
-  "STAT_1_LABEL": "Jaar Ervaring",
-  "STAT_2_VALUE": "9.9",
-  "STAT_2_LABEL": "Beoordeling op",
-  "STAT_3_VALUE": "4.8",
-  "STAT_3_LABEL": "Beoordeling op",
-  "STAT_4_VALUE": "",
-  "STAT_4_LABEL": "",
+  "STAT_1_LABEL": "Jaar ervaring",
+  "STAT_2_VALUE": "Den Haag",
+  "STAT_2_LABEL": "Werkgebied",
+  "STAT_3_VALUE": "24/7",
+  "STAT_3_LABEL": "Bereikbaar bij spoed",
+  "STAT_4_VALUE": "Gratis",
+  "STAT_4_LABEL": "Offerte & inspectie",
   "STEP_1_TITLE": "Neem Contact Op",
-  "STEP_1_BODY": "Eenvoudig contact opnemen via telefoon, e-mail of ons online formulier.",
+  "STEP_1_BODY": "Eenvoudig contact opnemen via telefoon, e-mail of online formulier.",
   "SERVICE_1_NAME": "Dakdekker",
   "SERVICE_1_DESC": "Professionele dakdekkersdiensten voor zowel particulieren als bedrijven.",
-  "WHY_1_TITLE": "24/7 Spoedservice",
-  "WHY_1_BODY": "Bij noodgevallen kunt u altijd op ons rekenen voor directe probleemoplossing.",
+  "WHY_1_TITLE": "Duurzame Materialen",
+  "WHY_1_BODY": "We gebruiken uitsluitend milieuvriendelijke en duurzame materialen.",
   "STEP_2_TITLE": "Dakinspectie",
   "STEP_2_BODY": "Een grondige inspectie van uw dak om de staat en eventuele problemen te beoordelen.",
   "SERVICE_2_NAME": "Daklekkage",
   "SERVICE_2_DESC": "Snelle en efficiënte reparatie van daklekkages, 24/7 beschikbaar.",
-  "WHY_2_TITLE": "Duurzame Materialen",
-  "WHY_2_BODY": "We gebruiken uitsluitend milieuvriendelijke en duurzame materialen voor uw dak.",
+  "WHY_2_TITLE": "Gecertificeerde Vakmanschap",
+  "WHY_2_BODY": "Ons team bestaat uit gecertificeerde dakdekkers met jarenlange ervaring.",
   "STEP_3_TITLE": "Vakkundige Uitvoering",
   "STEP_3_BODY": "Onze experts voeren de benodigde werkzaamheden snel en professioneel uit.",
   "SERVICE_3_NAME": "Dakreparatie",
   "SERVICE_3_DESC": "Duurzame oplossingen voor alle soorten dakschade.",
-  "WHY_3_TITLE": "Gecertificeerde Vakmensen",
-  "WHY_3_BODY": "Ons team van gecertificeerde dakdekkers levert vakmanschap van het hoogste niveau.",
-  "STEP_4_TITLE": "",
-  "STEP_4_BODY": "",
+  "WHY_3_TITLE": "Alles-in-één Partner",
+  "WHY_3_BODY": "Van inspectie tot complete renovaties, we bieden totaaloplossingen.",
+  "STEP_4_TITLE": "Offerte opvragen",
+  "STEP_4_BODY": "U ontvangt een helder overzicht van de kosten en werkzaamheden.",
   "SERVICE_4_NAME": "Dakonderhoud",
   "SERVICE_4_DESC": "Regelmatig onderhoud om de levensduur van uw dak te verlengen.",
-  "WHY_4_TITLE": "Alles-in-één Partner",
-  "WHY_4_BODY": "Van inspectie tot complete renovaties, wij bieden totaaloplossing voor uw dakbehoeften.",
+  "WHY_4_TITLE": "Persoonlijk contact",
+  "WHY_4_BODY": "Korte lijnen en heldere communicatie van begin tot eind.",
   "TM_1_QUOTE": "Dakallianss krijgt van mij met gemak 5 sterren! Vanaf de offerte tot de oplevering verliep alles vlekkeloos en professioneel. Ze reageerden snel, dachten mee over de beste oplossing voor mijn dak en gaven een eerlijke, duidelijke prijs…",
   "TM_1_NAME": "Esméralda van Rossum",
   "TM_1_LABEL": "Via Google · een maand geleden",
@@ -2130,6 +2117,29 @@ button { font-family: inherit; cursor: pointer; }
     };;
 
     hydrate();
+
+    // ── Template B: toon alleen wat echt is (rule 2b) + echte contactlinks ──
+    (function () {
+      try { window.__degRan = true;
+      function tx(el){ return el ? (el.textContent || '').replace(/\s+/g,' ').trim() : ''; }
+      function hide(el){ if (el) el.style.display = 'none'; }
+      function allStock(s){ if(!s) return false; var im=s.querySelectorAll('img'); return im.length>0 && Array.prototype.every.call(im,function(i){return (i.getAttribute('src')||'').indexOf('../assets')===0;}); }
+      // Contactlinks (bel/mail) → echte partij.
+      var ph=(data.FOOT_PHONE||'').replace(/[^0-9+]/g,''), em=(data.FOOT_EMAIL||'').trim();
+      document.querySelectorAll('.contact-info a[href^="tel:"]').forEach(function(a){ if(ph) a.setAttribute('href','tel:'+ph); });
+      document.querySelectorAll('.contact-info a[href^="mailto:"]').forEach(function(a){ if(em.indexOf('@')>0) a.setAttribute('href','mailto:'+em); });
+      // Reviews: alleen de volle; geen enkele → reviewblok (+ kop) weg.
+      var rg=document.querySelector('.rev-team .reviews-grid'), full=0;
+      if(rg){ Array.prototype.forEach.call(rg.querySelectorAll('.review'),function(r){ var q=tx(r.querySelector('blockquote')).replace(/["'“”‘’]/g,'').trim(); if(q.length>2) full++; else hide(r); });
+        if(full===0){ hide(rg); hide(rg.previousElementSibling); } else rg.style.gridTemplateColumns='repeat('+Math.min(full,3)+',minmax(0,1fr))'; }
+      // Team: alleen leden met echte naam; geen enkele → teamblok weg.
+      var tb=document.querySelector('.rev-team .team-block'), named=0;
+      if(tb){ Array.prototype.forEach.call(tb.querySelectorAll('.member'),function(m){ if(tx(m.querySelector('h4')).length>0) named++; else hide(m); }); if(named<1) hide(tb); }
+      if(full===0 && named<1) hide(document.querySelector('.rev-team'));
+      // Projecten/Kennis met alléén stock-beeld zijn niet écht van de partij → weg.
+      ['projecten','kennis'].forEach(function(id){ var s=document.getElementById(id); if(s && allStock(s)) hide(s); });
+      } catch(e){ window.__degErr = String((e && e.message) || e); }
+    })();
   })();
 </script>
 <!-- Per-lead Harv booking bubble + tracking pixel (injected by the generator) -->
