@@ -1,0 +1,5 @@
+anthropic
+beautifulsoup4
+requests
+Pillow
+playwright>=1.40
