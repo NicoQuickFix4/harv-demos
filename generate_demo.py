@@ -1517,9 +1517,10 @@ render_blog_html = build_blog_html
 TEMPLATES_ROOT = REPO_ROOT / "templates"
 # Sector → template-bestand. Voeg hier een regel toe als een sector-template klaar is.
 SECTOR_TEMPLATES: dict[str, str] = {
-    "makelaardij": "makelaardij-a.html",
-    "dakdekker": "Roofer/dakdekkers-a.html",
-    "dakdekkers": "Roofer/dakdekkers-a.html",
+    # makelaardij-templates zijn verwijderd (scope = dakdekkers); voeg een
+    # sector pas weer toe zodra zijn template in templates/ staat.
+    "dakdekker": "Roofer/dakdekkers-c.html",
+    "dakdekkers": "Roofer/dakdekkers-c.html",
 }
 
 
@@ -1625,6 +1626,11 @@ _WP_DEFAULT_HEXES = {
     "#cf2e2e", "#ff6900", "#fcb900", "#7bdcb5", "#00d084", "#8ed1fc", "#0693e3",
     "#9b51e0", "#abb8c3", "#eb144c", "#f78da7", "#9900ef", "#cc3366", "#ffffff",
     "#000000",
+    # nieuwere Gutenberg/blok-thema presets (o.a. #49e670 won onterecht bij Van Steen)
+    "#49e670", "#32373c", "#ff6f61", "#7adcb4", "#00a0d2",
+    # vendor-/widgetkleuren die nooit een merkkleur zijn: Google (reviews),
+    # Facebook, WhatsApp, Trustpilot
+    "#fbbc05", "#4285f4", "#34a853", "#ea4335", "#1877f2", "#25d366", "#00b67a",
 }
 _CITY_AFTER_POSTCODE_RE = re.compile(r"\b\d{4}\s?[A-Z]{2}\b\s+([A-Za-zÀ-ÿ'’.\-\s]+)")
 
@@ -1676,6 +1682,143 @@ def _is_neutralish(h: str) -> bool:
 def _darken(h: str, factor: float = 0.42) -> str:
     r, g, b = _hex_to_rgb(h)
     return "#%02x%02x%02x" % (int(r * factor), int(g * factor), int(b * factor))
+
+
+def detect_brand_colors_rendered(url: str) -> tuple[Optional[str], Optional[str], Optional[str], Optional[str]]:
+    """Bepaal (accent, dark, site_bg, cta) door de site écht te renderen.
+
+    Kleur-rollen volgen hoe de LEAD ze gebruikt (les 2026-06-11, Van Gelder):
+      - cta    = de knop-achtergrondkleur van hun site (geel/oranje/lime…) —
+                 die hoort bij ÓNZE knoppen, niet als algemene merkkleur;
+      - accent = de bredere merkkleur uit oppervlakken (header/footer/nav) en
+                 zichtbare pixels — tekstkleuren tellen niet mee (misleidend);
+      - dark   = donkerste vlakkleur; site_bg voor de dark-variant-detectie.
+
+    Meet wat een bezoeker ZIET in plaats van wat er in CSS-bestanden staat —
+    daardoor wegen vendor-paletten (WP/Gutenberg-presets, Google-reviewwidget,
+    social embeds) niet mee. Twee bronnen, gecombineerd:
+      1. computed styles van knoppen/CTA's/links/headers (merk-rollen);
+      2. het pixel-histogram van de bovenkant van de pagina (zichtbaarheid).
+    Een knopkleur die ook zichtbaar in beeld is wint; anders de meest
+    voorkomende verzadigde pixelkleur. (None, None) bij falen — caller valt
+    terug op de statische detectie.
+    """
+    try:
+        import io
+        from collections import Counter as _Counter
+        from PIL import Image
+        from playwright.sync_api import sync_playwright
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch(args=["--no-sandbox"])
+            page = browser.new_page(viewport={"width": 1280, "height": 900})
+            # domcontentloaded + vaste wachttijd: sites met pollende widgets
+            # (chat/analytics) bereiken networkidle nooit en zouden timeouten.
+            page.goto(url, wait_until="domcontentloaded", timeout=20000)
+            page.wait_for_timeout(2500)
+            css_colors = page.evaluate("""() => {
+                const out = [];
+                const push = (c, role) => { if (c) out.push([c, role]); };
+                document.querySelectorAll(
+                    'button,[class*="btn"],[class*="cta"],input[type=submit]'
+                ).forEach(el => {
+                    const r = el.getBoundingClientRect();
+                    if (r.width < 40 || r.height < 18) return;
+                    push(getComputedStyle(el).backgroundColor, 'btn');
+                });
+                document.querySelectorAll('header,nav,footer,[class*="hero"]').forEach(el => {
+                    push(getComputedStyle(el).backgroundColor, 'surf');
+                });
+                return out;
+            }""")
+            body_bg = page.evaluate(
+                "() => getComputedStyle(document.body).backgroundColor")
+            shot = page.screenshot()
+            browser.close()
+
+        def _parse_css_rgb(c: str) -> Optional[str]:
+            m = re.match(r"rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)", c or "")
+            if not m:
+                return None
+            if m.group(4) is not None and float(m.group(4)) < 0.5:
+                return None  # (semi-)transparant
+            return _hex_from_rgb(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+
+        btn_counts: _Counter[str] = _Counter()
+        surf_counts: _Counter[str] = _Counter()
+        for c, role in css_colors:
+            h = _parse_css_rgb(c)
+            if not h or _is_neutralish(h):
+                continue
+            (btn_counts if role == "btn" else surf_counts)[h] += 1
+
+        img = Image.open(io.BytesIO(shot)).convert("RGB").resize((320, 225))
+        pix_counts: _Counter[tuple] = _Counter()
+        dark_counts: _Counter[tuple] = _Counter()
+        total = 320 * 225
+        for r, g, b in img.getdata():
+            q = (r // 24 * 24, g // 24 * 24, b // 24 * 24)
+            if max(r, g, b) - min(r, g, b) >= 28:
+                pix_counts[q] += 1
+            if (r + g + b) / 3 < 70 and max(r, g, b) - min(r, g, b) >= 12:
+                dark_counts[q] += 1
+
+        # Zichtbare paginakleur: opake body-achtergrond, anders de kleur van de
+        # bovenste UI-strook (headerbalk) — foto-hero's vertekenen het beeld,
+        # maar de headerbalk verraadt betrouwbaar een donkere site.
+        site_bg = _parse_css_rgb(body_bg)
+        if not site_bg or _parse_css_rgb(body_bg) is None:
+            strip = list(img.crop((0, 0, 320, 14)).getdata())
+            sr = sum(p[0] for p in strip) // len(strip)
+            sg = sum(p[1] for p in strip) // len(strip)
+            sb = sum(p[2] for p in strip) // len(strip)
+            site_bg = _hex_from_rgb(sr, sg, sb)
+
+        def _visible(h: str, min_frac: float = 0.002) -> bool:
+            r, g, b = _hex_to_rgb(h)
+            seen = sum(n for (qr, qg, qb), n in pix_counts.items()
+                       if abs(qr - r) <= 36 and abs(qg - g) <= 36 and abs(qb - b) <= 36)
+            return seen / total >= min_frac
+
+        # CTA = de meest gebruikte heldere knop-achtergrond van hun site.
+        cta = None
+        for h, _n in btn_counts.most_common(8):
+            if 60 <= _brightness(h) <= 240 and _visible(h, 0.0008):
+                cta = h
+                break
+
+        # Accent = bredere merkkleur uit oppervlakken/pixels; donkere
+        # vlakkleuren zijn juist de 'dark'. Niet (bijna) dezelfde als de CTA.
+        accent, dark = None, None
+        for h, _n in surf_counts.most_common(10):
+            br = _brightness(h)
+            if br < 60:
+                dark = dark or h
+                continue
+            if br <= 235 and _visible(h) and not (cta and _color_distance(h, cta) < 60):
+                accent = h
+                break
+        if not accent and pix_counts:
+            for (qr, qg, qb), n in pix_counts.most_common(8):
+                h = _hex_from_rgb(qr, qg, qb)
+                if (n / total >= 0.01 and 60 <= _brightness(h) <= 235
+                        and not (cta and _color_distance(h, cta) < 60)):
+                    accent = h
+                    break
+        if not accent:
+            accent = cta  # site leunt volledig op één kleur
+        if not accent:
+            return None, None, site_bg, None
+
+        if not dark and dark_counts:
+            (qr, qg, qb), n = dark_counts.most_common(1)[0]
+            if n / total >= 0.03:
+                dark = _hex_from_rgb(qr, qg, qb)
+        if not dark:
+            dark = _darken(accent, 0.42)
+        return accent, dark, site_bg, cta
+    except Exception:  # noqa: BLE001 — rendering is best effort
+        return None, None, None, None
 
 
 def detect_brand_colors(html: str, extra_css: str = "") -> tuple[Optional[str], Optional[str]]:
@@ -1837,27 +1980,455 @@ _SERVICE_PRIORITY = [
 ]
 
 # Junk we never want to treat as content imagery (logos, badges, sprites, …).
+# RULES 7: ook keurmerken/certificaat-badges zijn nooit content-beeld.
 _IMG_SKIP = ("logo", "icon", "favicon", "avatar", "placeholder", "sprite",
-             "trustoo", "google", "whatsapp", "banner", "pixel")
+             "trustoo", "google", "whatsapp", "banner", "pixel",
+             "keurmerk", "certificaat", "certificate", "vca", "vebidak",
+             "tectum", "kiwa", "badge", "award", "kvk", "review", "sticker",
+             "wordmark", "embleem")
+
+
+def _img_real_src(im) -> str:
+    """Echte afbeeldings-URL achterhalen, óók bij lazy-loading. Veel bouwers
+    (Elementor, WP-Rocket, NitroPack, Drupal) zetten `src` op leeg of een
+    `data:`-placeholder en bewaren de echte URL in een lazy-/data-attribuut of
+    in srcset. Zonder dit levert een lazy-loadende site (de meeste WordPress-
+    daksites) NUL foto's op — terwijl de foto's er wél zijn (feedback 2026-06-23)."""
+    src = (im.get("src") or "").strip()
+    if src and not src.startswith("data:"):
+        return src
+    # src is leeg of een data:-placeholder -> echte URL staat in een lazy-attr
+    for attr in ("data-src", "data-lazy-src", "data-original",
+                 "nitro-lazy-src", "data-nitro-lazy-src"):
+        v = (im.get(attr) or "").strip()
+        if v and not v.startswith("data:"):
+            return v
+    # …of in een srcset-variant ("url1 480w, url2 900w") -> pak de laatste (grootste)
+    for attr in ("nitro-lazy-srcset", "data-srcset", "srcset"):
+        v = (im.get(attr) or "").strip()
+        if v:
+            cand = v.split(",")[-1].strip().split()
+            if cand and not cand[0].startswith("data:"):
+                return cand[0]
+    return src  # niets bruikbaars -> (lege/data) src; wordt verderop weggefilterd
 
 
 def _imgs_with_alt(soup: "BeautifulSoup", base_url: str) -> list[dict[str, str]]:
     """Collect real content images (with their alt text) so they can be matched
-    to template slots. Skips logos/icons/badges. De-duped on URL, in DOM order."""
+    to template slots. Skips logos/icons/badges (checked in BOTH the url and the
+    alt text). De-duped on URL, in DOM order."""
     out: list[dict[str, str]] = []
     seen: set[str] = set()
     for im in soup.find_all("img"):
-        src = im.get("src") or im.get("data-src") or im.get("data-lazy-src") or ""
-        if not re.search(r"\.(jpe?g|png|webp)(\?|$)", src, re.I):
+        src = _img_real_src(im)
+        # avif erbij: moderne CMS'en (o.a. Drupal) serveren .jpg.avif?itok=… ;
+        # Pillow 11+ decodeert avif, dus die foto's zijn gewoon bruikbaar.
+        if not re.search(r"\.(jpe?g|png|webp|avif)(\?|$)", src, re.I):
             continue
-        if any(k in src.lower() for k in _IMG_SKIP):
+        alt = re.sub(r"\s+", " ", (im.get("alt") or "")).strip()
+        hay = (src + " " + alt).lower()
+        if any(k in hay for k in _IMG_SKIP):
             continue
         url = urljoin(base_url, src)
         if url in seen:
             continue
         seen.add(url)
-        out.append({"url": url, "alt": re.sub(r"\s+", " ", (im.get("alt") or "")).strip()})
+        out.append({"url": url, "alt": alt})
     return out
+
+
+def _image_meta(url: str, with_preview: bool = False) -> Optional[dict]:
+    """Download een afbeelding en lees afmetingen, transparantie-aandeel en een
+    8x8 perceptual hash (aHash). Met `with_preview` ook een verkleinde JPEG
+    (base64, lange zijde <= 640px) voor de AI-beeldselectie — voorkomt een
+    tweede download. None bij netwerk- of decode-fout."""
+    try:
+        import base64 as _b64mod
+        import io
+        from PIL import Image
+        r = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=8)
+        r.raise_for_status()
+        img = Image.open(io.BytesIO(r.content))
+        img.load()
+        w, h = img.size
+        alpha_frac = 0.0
+        if img.mode in ("RGBA", "LA", "PA") or (img.mode == "P" and "transparency" in img.info):
+            a = img.convert("RGBA").getchannel("A")
+            hist = a.histogram()
+            alpha_frac = sum(hist[:128]) / float(max(1, w * h))
+        g = img.convert("L").resize((8, 8))
+        px = list(g.getdata())
+        avg = sum(px) / 64.0
+        bits = 0
+        for i, p in enumerate(px):
+            if p > avg:
+                bits |= 1 << i
+        # Gemiddelde luminantie van de NIET-transparante pixels: daarmee zien we
+        # of een logo licht ("light"-variant, wit) of donker is — bepaalt of hij
+        # een contrasterend chipje nodig heeft op zijn achtergrond.
+        try:
+            rgba = img.convert("RGBA")
+            px = list(rgba.resize((24, 24)).getdata())
+            vis = [(r0 + g0 + b0) / 3 for r0, g0, b0, a0 in px if a0 > 120]
+            lum = sum(vis) / len(vis) if vis else 128.0
+        except Exception:  # noqa: BLE001
+            lum = 128.0
+        meta = {"w": w, "h": h, "alpha": alpha_frac, "hash": bits, "lum": lum}
+        if with_preview:
+            prev = img.convert("RGB")
+            if max(prev.size) > 640:
+                sc = 640.0 / max(prev.size)
+                prev = prev.resize((int(prev.width * sc), int(prev.height * sc)), Image.LANCZOS)
+            buf = io.BytesIO()
+            prev.save(buf, format="JPEG", quality=78)
+            meta["b64"] = _b64mod.standard_b64encode(buf.getvalue()).decode("ascii")
+        return meta
+    except Exception:  # noqa: BLE001 — verificatie is best effort
+        return None
+
+
+def _hash_dist(a: int, b: int) -> int:
+    return bin(a ^ b).count("1")
+
+
+def _svg_aspect(url: str) -> Optional[float]:
+    """Breedte/hoogte-verhouding van een SVG via de viewBox (PIL leest geen
+    SVG; voor wordmark-detectie is de verhouding genoeg)."""
+    try:
+        r = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=8)
+        r.raise_for_status()
+        m = re.search(r'viewBox\s*=\s*["\']\s*[\d.\-]+[\s,]+[\d.\-]+[\s,]+([\d.]+)[\s,]+([\d.]+)',
+                      r.text, re.I)
+        if not m:
+            m = re.search(r'width\s*=\s*["\']?([\d.]+)[^>]*height\s*=\s*["\']?([\d.]+)', r.text, re.I)
+        if m and float(m.group(2)) > 0:
+            return float(m.group(1)) / float(m.group(2))
+    except Exception:  # noqa: BLE001
+        pass
+    return None
+
+
+def _filter_image_pool(pool: list[dict[str, str]], logo_url: str = "") -> list[dict[str, str]]:
+    """RULES 7: weer merk-assets en near-duplicates uit de beeldpool op basis
+    van échte beeldkenmerken — klein, (deels) transparant of extreem breed is
+    een logo/keurmerk/badge, geen content-foto. Twee bijna-identieke foto's
+    (aHash-afstand <= 6) komen nooit samen in de pool, zodat ze ook nooit
+    naast elkaar in een grid belanden. Niet te downloaden -> behouden (de
+    url/alt-filters vingen de evidente junk al)."""
+    out: list[dict[str, str]] = []
+    hashes: list[int] = []
+    logo_l = (logo_url or "").strip().lower()
+    for it in pool[:14]:
+        url = it.get("url") or ""
+        if logo_l and url.lower() == logo_l:
+            continue
+        meta = _image_meta(url, with_preview=True)
+        if meta is None:
+            out.append(it)
+            continue
+        if meta["w"] < 350 or meta["h"] < 230:
+            continue  # badges/keurmerken zijn klein
+        if meta["w"] / max(1.0, float(meta["h"])) > 2.6:
+            continue  # extreem breed = wordmark/banner
+        if meta["alpha"] > 0.02:
+            continue  # transparante uitsnede = logo/badge
+        if any(_hash_dist(meta["hash"], hsh) <= 6 for hsh in hashes):
+            continue  # near-duplicate van een eerdere foto
+        hashes.append(meta["hash"])
+        # _hash meenemen: de hero-selectie gebruikt 'm later om twee té gelijkende
+        # foto's nooit samen in de split-hero te zetten (RULES 7, feedback 2026-06-23).
+        out.append({**it, "w": meta["w"], "h": meta["h"],
+                    "_b64": meta.get("b64"), "_hash": meta["hash"]})
+    return out
+
+
+_IMG_SELECT_MODEL = os.environ.get("HARV_IMGSELECT_MODEL", "claude-sonnet-4-6")
+
+# Kwaliteitsdrempels voor de strenge beeldkeuring. Beeld is HET dragende element
+# van de demo ("valt of staat met de foto's") -> liever een backup-foto dan een
+# matige eigen foto. Tunebaar via env. Een foto moet >= ACCEPT_MIN scoren om
+# überhaupt gebruikt te worden; de hero is heiliger en vereist >= HERO_MIN +
+# hero_safe (liggend, onderwerp niet pal in het midden, geen tekst in het
+# centrum — want titel/formulier liggen daar overheen).
+_IMG_ACCEPT_MIN = int(os.environ.get("HARV_IMG_ACCEPT_MIN", "62"))
+_IMG_HERO_MIN = int(os.environ.get("HARV_IMG_HERO_MIN", "70"))
+# Hamming-afstand waaronder twee hero-foto's "te veel op elkaar lijken" en dus
+# nooit samen in de split-hero mogen (feedback 2026-06-23). Losser dan de
+# pool-dedup (6): near-duplicates zijn al weg, dit vangt "zelfde tafereel".
+_IMG_HERO_SIM_DIST = int(os.environ.get("HARV_IMG_HERO_SIM_DIST", "12"))
+# Categorieën die het visie-model toekent. Alleen deze mogen de site in:
+_IMG_ACCEPT_CATS = {"people_working", "beautiful_roof", "craft_detail",
+                    "van_clean", "material"}
+# … alle overige (mold/open_roof/damage/debris/logo_badge/portrait/interior/
+#   text_heavy/stock_unrelated/other) worden NOOIT geplaatst.
+
+
+def ai_select_images(
+    pool: list[dict[str, Any]],
+    services: list[str],
+    company: str,
+    *,
+    logo_url: str = "",
+    slug: str = "",
+    lead_id: str = "",
+) -> dict[str, Any]:
+    """Laat een visie-model de site-foto's toewijzen aan de template-slots.
+
+    Beeld is het belangrijkste personalisatie-element: de eerste foto's moeten
+    van de eigen site komen ("wow, dit is ónze zaak") — bij voorkeur eigen
+    werk/werkers, passend bij de sectie, professioneel. Het model mag een slot
+    leeg laten (-> stock-fallback), nooit een foto twee keer geven.
+
+    Returns {"services": {naam: url}, "why": [url, ...],
+             "logo_contains_name": bool|None}. Leeg dict bij falen/geen key.
+    Kostenbewaking: gelogd als step "sonnet_imgselect"; het hele element moet
+    onder de €0,08 per demo blijven (downscaled previews, één call).
+    """
+    cands = [it for it in pool if it.get("_b64")]
+    if not cands and not logo_url:
+        return {}
+    key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not key:
+        return {}
+    return _ai_select_images_call(pool, services, company, logo_url=logo_url,
+                                  slug=slug, lead_id=lead_id, _retry=True)
+
+
+def _ai_select_images_call(
+    pool: list[dict[str, Any]],
+    services: list[str],
+    company: str,
+    *,
+    logo_url: str = "",
+    slug: str = "",
+    lead_id: str = "",
+    _retry: bool = False,
+) -> dict[str, Any]:
+    cands = [it for it in pool if it.get("_b64")]
+    key = os.environ.get("ANTHROPIC_API_KEY", "")
+    try:
+        import anthropic
+
+        content: list[dict[str, Any]] = []
+        svc_lines = "\n".join(f"- {s}" for s in services[:4]) or "- (geen diensten bekend)"
+        # STRENGE KEURING: het model beoordeelt ELKE foto los (score + categorie +
+        # tekst-hoeveelheid + hero-geschiktheid). De selectie zelf (hero-paar /
+        # diensten / why) gebeurt daarna in Python met harde drempels — zo is de
+        # kwaliteitslat deterministisch en niet afhankelijk van de bui van het model.
+        prompt = (
+            f"Je bent een strenge fotoredacteur voor een premium demo-website van "
+            f"dakdekkersbedrijf {company}. De site VALT OF STAAT met de kwaliteit van "
+            "de foto's, dus keur streng. Beoordeel hieronder ELKE genummerde foto los.\n\n"
+            "Geef per foto een CATEGORIE (cat):\n"
+            "  GOED (mogen geplaatst worden):\n"
+            "  - people_working : dakdekker(s)/vakmensen duidelijk aan het werk op/aan een dak.\n"
+            "  - beautiful_roof : een mooi, strak, NET AFGEWERKT dak (nieuwe/gerenoveerde "
+            "pannen, bitumen, EPDM, leien) — representatief en aantrekkelijk.\n"
+            "  - craft_detail   : net vakwerk-detail (nok, goot, lood/zink, schoorsteen) "
+            "dat er verzorgd en professioneel uitziet.\n"
+            "  - van_clean      : een verzorgde bedrijfsbus/-wagen (bedrijfslogo prima), "
+            "MITS niet volgeplakt met tekst.\n"
+            "  - material       : mooi/representatief materiaal of een net bouwtafereel.\n"
+            "  AFKEUREN (NOOIT plaatsen — geef de juiste reden als cat):\n"
+            "  - mold           : schimmel, algen, vocht-/lekkagevlekken, rot, vieze plekken.\n"
+            "  - open_roof      : open/half-gesloopt dak, pannen eraf, kale dakconstructie, "
+            "een dak 'dat openligt', sloop/afbraak, rommelige bouwplaats.\n"
+            "  - damage         : schade-closeup, kapot dak, storm-/lekschade.\n"
+            "  - debris         : bouwafval, rommel, troep.\n"
+            "  - text_heavy     : poster/banner/flyer-achtig, prijslijst, veel tekst-overlay, "
+            "'bel nu'-promo — beeld dat vooral uit tekst bestaat.\n"
+            "  - logo_badge     : logo, keurmerk, certificaat, badge, sticker, wordmark.\n"
+            "  - portrait       : portret/pasfoto/review-avatar (persoon ZONDER werkcontext).\n"
+            "  - interior       : interieur, kantoor, vergaderzaal, showroom.\n"
+            "  - stock_unrelated: duidelijk generieke stockfoto die niet bij dit bedrijf past.\n"
+            "  - other          : iets anders dat niet thuishoort.\n\n"
+            "Per foto ook:\n"
+            "  score (0-100): hoe mooi/bruikbaar als blikvanger op een premium site. "
+            "Wees streng: een matige of twijfelachtige foto < 60. Twijfel je of een dak "
+            "écht 'mooi' is? Geef dan een LAGE score (liever een nette backup dan een matige "
+            "eigen foto).\n"
+            "  text (none|light|heavy): hoeveel tekst/overlay in het beeld zit. "
+            "Een busje met alleen een logo = light; een banner vol tekst = heavy.\n"
+            "  hero_safe (true/false): geschikt als grote HERO-foto. true alleen als: "
+            "liggend (breder dan hoog), het hoofdonderwerp NIET pal in het midden zit "
+            "(daar komt de titel + een formulier overheen) en er GEEN belangrijke tekst "
+            "in het midden/onder staat. EXTRA: de hero wordt GECENTREERD bijgesneden, "
+            "dus het onderwerp dat je wilt tonen (bv. de werkende persoon) moet óók ná "
+            "die crop goed zichtbaar blijven — niet half buiten beeld, niet zó klein of "
+            "aan de rand dat het wegvalt, en niet achter de titel/het formulier (midden) "
+            "verdwijnen. Een HELE, duidelijk werkende persoon in beeld is sterker dan "
+            "alleen handen of een los detail. Anders false.\n"
+            f"  service (één van: {', '.join(services[:4]) or '—'} | null): bij welke dienst "
+            "deze foto het best past, of null.\n"
+            "  reason: heel kort waarom.\n\n"
+            "Geef UITSLUITEND JSON:\n"
+            "{\"photos\":[{\"n\":1,\"cat\":\"...\",\"score\":0-100,\"text\":\"none|light|heavy\","
+            "\"hero_safe\":true,\"service\":\"<dienstnaam|null>\",\"reason\":\"...\"}, ...]"
+        )
+        if logo_url:
+            prompt += (", \"logo_contains_name\": true/false}  — de LAATSTE afbeelding is hun logo; "
+                       f"logo_contains_name = staat de bedrijfsnaam ('{company}') óf een kenmerkend "
+                       "deel ervan (bv. de achternaam of merknaam) als LEESBARE TEKST in dat logo? "
+                       "Bij twijfel: true.")
+        else:
+            prompt += "}"
+        content.append({"type": "text", "text": prompt})
+        for i, it in enumerate(cands, 1):
+            content.append({"type": "text", "text": f"\n[foto {i}]"})
+            content.append({"type": "image", "source": {
+                "type": "base64", "media_type": "image/jpeg", "data": it["_b64"]}})
+        if logo_url:
+            lmeta = _image_meta(logo_url, with_preview=True)
+            if lmeta and lmeta.get("b64"):
+                content.append({"type": "text", "text": "\n[logo]"})
+                content.append({"type": "image", "source": {
+                    "type": "base64", "media_type": "image/jpeg", "data": lmeta["b64"]}})
+            else:
+                logo_url = ""  # logo niet leesbaar -> vraag vervalt
+
+        client = anthropic.Anthropic(api_key=key)
+        msg = client.messages.create(
+            model=_IMG_SELECT_MODEL, max_tokens=1400,
+            messages=[{"role": "user", "content": content}],
+        )
+        raw = msg.content[0].text
+        m = re.search(r"\{.*\}", raw, re.DOTALL)
+        try:
+            data = json.loads(m.group()) if m else {}
+        except json.JSONDecodeError:
+            # Model schreef kapotte JSON — telt als misser; retry vangt het op.
+            data = {}
+
+        try:  # kosten berekenen + loggen (best effort, mag nooit breken)
+            import sys as _sys
+            _scraper = Path(__file__).resolve().parent.parent / "harv-scraper"
+            if _scraper.exists() and str(_scraper) not in _sys.path:
+                _sys.path.insert(0, str(_scraper))
+            import cost_tracker as _ct
+            _eur = _ct.ai_call_cost_eur(
+                _IMG_SELECT_MODEL, int(msg.usage.input_tokens), int(msg.usage.output_tokens))
+            log_ai_cost(slug, "sonnet_imgselect",
+                        {"_cost_eur": _eur, "_model": _IMG_SELECT_MODEL,
+                         "_tokens": {"in": int(msg.usage.input_tokens),
+                                     "out": int(msg.usage.output_tokens)}},
+                        lead_id=lead_id)
+        except Exception as _exc:  # noqa: BLE001
+            print(f"  ⚠ kostenlog beeldselectie overgeslagen: {_exc}")
+
+        # ── Scores per foto inlezen, koppelen aan de kandidaat-url + afmetingen ──
+        photos = data.get("photos") or []
+        scored: list[dict[str, Any]] = []
+        for p in photos:
+            try:
+                i = int(p.get("n"))
+            except (TypeError, ValueError):
+                continue
+            if not (1 <= i <= len(cands)):
+                continue
+            c = cands[i - 1]
+            try:
+                score = max(0, min(100, int(p.get("score", 0))))
+            except (TypeError, ValueError):
+                score = 0
+            scored.append({
+                "url": c["url"],
+                "cat": str(p.get("cat") or "other"),
+                "score": score,
+                "text": str(p.get("text") or "none"),
+                "hero_safe": bool(p.get("hero_safe")),
+                "service": (str(p["service"]) if p.get("service") else None),
+                "w": c.get("w") or 0, "h": c.get("h") or 0,
+                "_hash": c.get("_hash"),
+                "reason": str(p.get("reason") or ""),
+            })
+
+        # ── Harde kwaliteitspoort: alleen GOEDE categorieën, boven de drempel,
+        #    zonder zware tekst-overlay halen de site. ──
+        accepted = [s for s in scored
+                    if s["cat"] in _IMG_ACCEPT_CATS
+                    and s["score"] >= _IMG_ACCEPT_MIN
+                    and s["text"] != "heavy"]
+        accepted.sort(key=lambda s: s["score"], reverse=True)
+
+        used: set = set()
+        # HERO (2 foto's, voor de split-hero van Template C; A/B pakt er 1):
+        # liggend + hero_safe + boven de strengere hero-drempel, beste eerst.
+        def _landscape(s: dict) -> bool:
+            return not (s["w"] and s["h"]) or s["w"] >= s["h"] * 1.15
+        hero_cands = [s for s in accepted
+                      if s["hero_safe"] and s["score"] >= _IMG_HERO_MIN and _landscape(s)]
+        # Hero-PAAR moet visueel DUIDELIJK verschillen: twee bijna-gelijke opnames
+        # naast elkaar in de split-hero oogt als een fout (RULES 7, feedback
+        # 2026-06-23). Kies de sterkste hero, en als tweede de beste die niet té
+        # veel op de eerste lijkt; de afgewezen bijna-twin blijft in `accepted` en
+        # zakt zo naar de reserve (dienst/why). Drempel losser dan de pool-dedup
+        # (6) want "lijkt te veel op elkaar" is ruimer dan "near-duplicate".
+        def _too_similar(a: dict, b: dict) -> bool:
+            ha, hb = a.get("_hash"), b.get("_hash")
+            if ha is None or hb is None:
+                return False  # geen hash -> niet te bepalen, blokkeer niet
+            return _hash_dist(ha, hb) <= _IMG_HERO_SIM_DIST
+        hero_picks: list[dict] = []
+        for s in hero_cands:
+            if len(hero_picks) >= 2:
+                break
+            if any(_too_similar(s, h) for h in hero_picks):
+                continue  # te vergelijkbaar met een al gekozen hero -> naar reserve
+            hero_picks.append(s)
+        hero_urls: list[str] = []
+        for s in hero_picks:
+            hero_urls.append(s["url"])
+            used.add(s["url"])
+
+        remaining = [s for s in accepted if s["url"] not in used]
+        # DIENSTEN: per dienstnaam de hoogst scorende foto die het model daaraan
+        # koppelde; valt terug op de generieke alt-match in de bake.
+        services_map: dict[str, str] = {}
+        for name in services[:4]:
+            best = None
+            for s in remaining:
+                if s["url"] in used:
+                    continue
+                if (s["service"] or "").strip().lower() == name.strip().lower():
+                    best = s
+                    break  # remaining is al op score gesorteerd
+            if best:
+                services_map[name] = best["url"]
+                used.add(best["url"])
+        # WHY: de overige goedgekeurde foto's (max 3), beste eerst.
+        why_urls = [s["url"] for s in remaining if s["url"] not in used][:3]
+        for u in why_urls:
+            used.add(u)
+
+        out: dict[str, Any] = {
+            "hero": hero_urls,
+            "services": services_map,
+            "why": why_urls,
+            # rest = ALLE goedgekeurde foto's op score (blind-fill mag hier veilig uit putten)
+            "approved": [s["url"] for s in accepted],
+            "scores": {s["url"]: s["score"] for s in scored},
+            # volledig per-foto oordeel (cat/score/text/hero_safe/service/reason) —
+            # voor de audit-/feedback-tool zodat je ziet WAAROM een foto koos/afviel.
+            "details": scored,
+        }
+        if logo_url:
+            out["logo_contains_name"] = bool(data.get("logo_contains_name"))
+
+        # Vision is niet deterministisch: 0 scores bij >= 3 echte foto's is
+        # vrijwel zeker een misser -> één keer opnieuw proberen.
+        if not scored and len(cands) >= 3 and _retry:
+            print("  🖼  AI-beeldkeuring gaf 0 scores — retry")
+            return _ai_select_images_call(pool, services, company, logo_url=logo_url,
+                                          slug=slug, lead_id=lead_id, _retry=False)
+        rej = len(scored) - len(accepted)
+        print(f"  🖼  AI-beeldkeuring: {len(accepted)}/{len(cands)} foto's goedgekeurd "
+              f"({rej} afgekeurd) — hero={len(hero_urls)} diensten={len(services_map)} "
+              f"why={len(why_urls)}"
+              + (f", logo bevat naam: {out.get('logo_contains_name')}" if logo_url else ""))
+        return out
+    except Exception as exc:  # noqa: BLE001 — beeldselectie is best effort
+        print(f"  ⚠ AI-beeldkeuring overgeslagen: {exc}")
+        return {}
 
 
 def _match_image(name: str, pool: list[dict[str, str]], used: set) -> Optional[str]:
@@ -1917,13 +2488,11 @@ def _service_cards_from_diensten(soup: "BeautifulSoup", base_url: str, headers: 
             ds = BeautifulSoup(d.text, "html.parser")
         except requests.RequestException:
             continue
-        img = ""
-        for im in ds.find_all("img"):
-            src = im.get("src") or im.get("data-src") or ""
-            if "wp-content/uploads" in src and re.search(r"\.(jpe?g|png|webp)(\?|$)", src, re.I) \
-                    and not re.search(r"logo|icon|favicon|avatar|placeholder", src, re.I):
-                img = urljoin(url, src)
-                break
+        # Zelfde strenge filter als de beeldpool (logo's heten lang niet altijd
+        # "logo" — Van Steen's logo heette "Untitled-design-…"): neem de eerste
+        # échte content-foto en bewaar de rest voor de beeldpool/AI-selectie.
+        cand_imgs = _imgs_with_alt(ds, url)
+        img = cand_imgs[0]["url"] if cand_imgs else ""
         desc = ""
         md = ds.find("meta", attrs={"name": "description"})
         if md and md.get("content"):
@@ -1937,7 +2506,9 @@ def _service_cards_from_diensten(soup: "BeautifulSoup", base_url: str, headers: 
         h1 = ds.find("h1")
         title = (h1.get_text(" ", strip=True) if h1 else title) or title
         if img:
-            cards.append({"image": img, "title": _trim(title, 40), "desc": _trim(desc, 150)})
+            cards.append({"image": img, "title": _trim(title, 40), "desc": _trim(desc, 150),
+                          "images": [{"url": c["url"], "alt": c["alt"] or title}
+                                     for c in cand_imgs[:4]]})
     return cards
 
 
@@ -2073,6 +2644,19 @@ def build_dakdekker_template_data(
     naam = clean_company_name(data.get("bedrijfsnaam"))
     # ECHTE vestigingsplaats uit het adres (niet de scrape-stad — bv. Hoorn≠Amsterdam).
     city = _city_from_address(data.get("adres"), (data.get("stad") or "")).strip()
+    # Werkgebied-check (besluit 2026-06-11): opereert het bedrijf realistisch
+    # gezien breder dan één stad (site noemt meerdere plaatsen, een provincie,
+    # "regio" of landelijk bereik), benoem dan de provincie/regio in de copy
+    # i.p.v. één stad — "Zuid-Holland" dekt de lading beter dan "Den Haag".
+    _area_raw = str((extract or {}).get("service_area") or "")
+    _wide_area = bool(re.search(
+        r",| en |provincie|regio\b|landelijk|heel\s+(nederland|zuid|noord|het\s+land)|omstreken|omgeving",
+        _area_raw, re.I))
+    _regio_naam = " ".join(w.title() for w in re.split(r"[\s-]+", str(data.get("regio") or "").strip()) if w)
+    # Provincienamen krijgen hun officiële koppelteken terug (db is slordig).
+    _regio_naam = re.sub(r"^(Noord|Zuid) (Holland|Brabant)$", r"\1-\2", _regio_naam)
+    if _wide_area and _regio_naam:
+        city = _regio_naam
     rating = data.get("google_rating")
     contact_naam = (data.get("contact_naam") or "").strip()
     year = datetime.now().year
@@ -2133,7 +2717,18 @@ def build_dakdekker_template_data(
         tm_intro = "Echte beoordelingen van klanten, rechtstreeks van Google."
 
     # ── Process: hun eigen stappen indien gevonden, anders generieke werkwijze ──
-    site_steps = extract.get("process") or []
+    # Saneer AI-output: "Stap N"-titels en "Inhoud niet beschikbaar"-bodies zijn
+    # waardeloze vulling — die mogen nooit de goede generieke werkwijze verdringen.
+    _AI_PH_RE = re.compile(r"niet beschikbaar|geen informatie|geen inhoud|onbekend|not available", re.I)
+    site_steps = []
+    for s in (extract.get("process") or []):
+        _t = str(s.get("title") or "").strip()
+        _b = str(s.get("body") or "").strip()
+        if not _t or _AI_PH_RE.search(_t) or re.fullmatch(r"stap\s*\d+\.?", _t, re.I):
+            continue
+        if _AI_PH_RE.search(_b):
+            _b = ""
+        site_steps.append({"title": _t, "body": _b})
     if len(site_steps) >= 2:
         steps = [{"title": s["title"], "body": s.get("body", "")} for s in site_steps][:4]
         process_intro = "Zo pakken wij uw dakklus aan, helder en stap voor stap."
@@ -2187,9 +2782,6 @@ def build_dakdekker_template_data(
     #    Vul de eerste 4 die we ECHT van de site kunnen afleiden (nooit verzinnen).
     #    Bewust GEEN sterren-rating (zit in de hero) en GEEN cert/verzekerd/garantie
     #    (zitten in de trust-marks). Werkgebied past zich aan de site aan. ──
-    _PROVS = ("zuid-holland", "noord-holland", "noord-brabant", "gelderland", "utrecht",
-              "overijssel", "limburg", "friesland", "groningen", "drenthe", "flevoland", "zeeland")
-
     def _exp_value(raw):
         m = re.search(r"(19|20)\d{2}", raw or "")
         if m:
@@ -2204,32 +2796,12 @@ def build_dakdekker_template_data(
         m = re.search(r"\d[\d.\s]{0,6}\d|\d", raw or "")
         return (m.group().replace(" ", "") + "+") if m else ""
 
-    _regio_l = (data.get("regio") or "").replace("-", " ").lower()
-    def _area_value(raw, city_):
-        a = re.sub(r"\s+", " ", (raw or "").strip())
-        low = a.lower()
-        # Provincie ALLEEN als de site 'm noemt EN het de echte regio van de klant is
-        # (voorkomt 'Utrecht' voor een Den Haag-bedrijf dat meerdere steden noemt).
-        for prov in _PROVS:
-            pl = prov.replace("-", " ")
-            if pl in low and pl in _regio_l:
-                return (prov.title(), "Werkgebied")
-        # Anders: de geverifieerde vestigingsplaats. Noemt de site meerdere
-        # plaatsen / een provincie / "regio" -> label "Werkgebied" (breder),
-        # anders "& omstreken".
-        if city_:
-            wider = bool(re.search(r",|\bprovincie\b|\bregio\b|omstreken|omgeving", a)) \
-                    or any(pp.replace("-", " ") in low for pp in _PROVS)
-            return (city_, "Werkgebied" if wider else "& omstreken")
-        return None
-
+    # RULES 7b: nooit een plaats/regio/werkgebied als stat — locatie hoort in
+    # hero/over-ons, niet in de cijferbalk (past ook niet op 390px).
     _pool = []
     _ev = _exp_value(extract.get("years_experience"))
     if _ev:
         _pool.append({"value": _ev, "label": "Jaar ervaring"})
-    _area = _area_value(extract.get("service_area"), city)
-    if _area:
-        _pool.append({"value": _area[0], "label": _area[1]})
     if extract.get("emergency"):
         _pool.append({"value": "24/7", "label": "Bereikbaar bij spoed"})
     if extract.get("free_quote"):
@@ -2244,7 +2816,8 @@ def build_dakdekker_template_data(
     _cu = _count_value(extract.get("customers"))
     if _cu:
         _pool.append({"value": _cu, "label": "Tevreden klanten"})
-    # dedup op waarde (geen 2x 'Gratis'/'24/7'), behoud prioriteitsvolgorde, max 4
+    # dedup op waarde (geen 2x 'Gratis'/'24/7'), behoud prioriteitsvolgorde.
+    # RULES 7b: max 3 stats — met 4 breekt de balk op mobiel (390px).
     _seen, stats = set(), []
     for _s in _pool:
         k = _s["value"].lower()
@@ -2252,7 +2825,7 @@ def build_dakdekker_template_data(
             continue
         _seen.add(k)
         stats.append(_s)
-        if len(stats) >= 4:
+        if len(stats) >= 3:
             break
     show_stats = len(stats) >= 2
 
@@ -2401,12 +2974,16 @@ def build_dakdekker_template_data(
         st = steps[i - 1] if i - 1 < len(steps) else None
         td[f"STEP_{i}_TITLE"] = st["title"] if st else ""
         td[f"STEP_{i}_BODY"] = st.get("body", "") if st else ""
-        sv = services[i - 1] if i - 1 < len(services) else None
-        td[f"SERVICE_{i}_NAME"] = sv["name"] if sv else ""
-        td[f"SERVICE_{i}_DESC"] = sv.get("desc", "") if sv else ""
         wy = whies[i - 1] if i - 1 < len(whies) else None
         td[f"WHY_{i}_TITLE"] = wy["title"] if wy else ""
         td[f"WHY_{i}_BODY"] = wy.get("body", "") if wy else ""
+    # Diensten tot 6 (Template C toont een langere diensten-lijst dan A/B).
+    # Lege slots -> "" zodat de bake de overtollige dienst-rij verwijdert i.p.v.
+    # er hardcoded template-tekst in te laten staan (heilige no-fabricatie-regel).
+    for i in range(1, 7):
+        sv = services[i - 1] if i - 1 < len(services) else None
+        td[f"SERVICE_{i}_NAME"] = sv["name"] if sv else ""
+        td[f"SERVICE_{i}_DESC"] = sv.get("desc", "") if sv else ""
 
     # Testimonials ook plat (eerste 4) voor de no-JS fallback; baking maakt ze dynamisch.
     for i in range(1, 5):
@@ -2417,7 +2994,19 @@ def build_dakdekker_template_data(
         td[f"TM_{i}_STARS"] = rev["stars"] if rev else ""
 
     # Echte site-foto's (alt + url) voor het vullen van dienst-/why-slots in de bake.
-    td["_IMAGE_POOL"] = extract.get("image_pool") or []
+    # RULES 7: pool eerst verifiëren op echte beeldkenmerken (geen logo's,
+    # keurmerken, badges of near-duplicates in content-slots).
+    # De dienst-detailfoto's tellen mee: sites met lazy-loading (lege img-src
+    # op de homepage) hebben hun beste foto's juist op de dienstpagina's.
+    _raw_pool = list(extract.get("image_pool") or [])
+    _pool_urls = {it.get("url") for it in _raw_pool}
+    for c in (extract.get("service_cards") or []):
+        for cit in (c.get("images") or
+                    ([{"url": c["image"], "alt": c.get("title") or ""}] if c.get("image") else [])):
+            if cit.get("url") and cit["url"] not in _pool_urls:
+                _raw_pool.append({"url": cit["url"], "alt": cit.get("alt") or c.get("title") or ""})
+                _pool_urls.add(cit["url"])
+    td["_IMAGE_POOL"] = _filter_image_pool(_raw_pool, data.get("logo_url") or "")
 
     return td
 
@@ -2451,25 +3040,75 @@ def _bake_dakdekker_dom(html: str, td: dict[str, Any]) -> str:
 
     # ── Echte merkkleuren toepassen (override op de :root tokens) ──
     accent, dark = td.get("_ACCENT"), td.get("_DARK")
+    _dark_theme = bool(td.get("_DARK_THEME"))
     if accent:
         def _mixw(h: str, amt: float) -> str:
             r, g, b = _hex_to_rgb(h)
             return "#%02x%02x%02x" % (
                 int(r + (255 - r) * amt), int(g + (255 - g) * amt), int(b + (255 - b) * amt))
+
+        def _mixd(h: str, amt: float, base: str = "#0c1422") -> str:
+            r, g, b = _hex_to_rgb(h)
+            br, bg_, bb = _hex_to_rgb(base)
+            return "#%02x%02x%02x" % (
+                int(r + (br - r) * amt), int(g + (bg_ - g) * amt), int(b + (bb - b) * amt))
         dark = dark or _darken(accent, 0.42)
+        # In de dark-variant is "accent-soft" een dónkere tint van het accent
+        # (mix richting de donkere achtergrond) i.p.v. een pasteltint.
+        accent_soft = _mixd(accent, 0.78) if _dark_theme else _mixw(accent, 0.85)
         css = (
             ":root{"
             f"--c-accent:{accent} !important;"
-            f"--c-accent-soft:{_mixw(accent, 0.85)} !important;"
+            f"--c-accent-soft:{accent_soft} !important;"
             f"--c-dark:{dark} !important;"
             f"--c-dark-soft:{_mixw(dark, 0.12)} !important;"
             "}"
         )
+        if _dark_theme:
+            # RULES 3/3b: contrast is heilig — de tekst-accentrol (--blue-strong:
+            # hero-highlight "in <plaats>", telefoonnummer, badges) bridgt naar
+            # de donkere merkkleur en valt op donker volledig weg. Geef hem een
+            # gegarandeerd leesbare toon: het accent zelf als dat licht genoeg
+            # is, anders een opgelichte versie.
+            _strong = accent if _brightness(accent) >= 130 else _mixw(accent, 0.55)
+            css += f"body.harv-dark{{--blue-strong:{_strong};}}"
+        # RULES 4 (les Van Gelder/Roofix): gebruikt de lead op de eigen site een
+        # duidelijke knopkleur (geel, lime, oranje…), dan krijgen ÓNZE knoppen
+        # die kleur — in licht én donker thema. Knopkleuren zijn knopkleuren.
+        _cta_col = td.get("_CTA_COLOR")
+        if _cta_col and _color_distance(_cta_col, accent) < 60 and not _dark_theme:
+            # CTA mag de hoofdkleur niet erven (RULES 4): valt de knopkleur
+            # samen met het accent, hou dan de eigen amber van de template.
+            _cta_col = None
+        if not _cta_col and _dark_theme and _brightness(accent) >= 110 and not _is_neutralish(accent):
+            _cta_col = accent  # dark-fallback: fel accent = CTA (Roofix-lime)
+        if _cta_col and not _is_neutralish(_cta_col) and 60 <= _brightness(_cta_col) <= 240:
+            # Tekst op de CTA: zwart zodra de kleur licht is (wit op gifgroen/geel
+            # leest niet — feedback 2026-06-11).
+            _on_cta = "#0c1605" if _brightness(_cta_col) >= 120 else "#ffffff"
+            _tint = _mixd(_cta_col, 0.80) if _dark_theme else _mixw(_cta_col, 0.85)
+            _scope = "body.harv-dark" if _dark_theme else ":root"
+            css += (
+                _scope + "{"
+                f"--amber:{_cta_col};"
+                f"--amber-strong:{_darken(_cta_col, 0.86)};"
+                f"--amber-deep:{_darken(_cta_col, 0.45)};"
+                f"--amber-tint:{_tint};"
+                f"--on-amber:{_on_cta};"
+                f"--shadow-amber:0 6px 18px {_cta_col}55;"
+                "}"
+            )
         head = soup.find("head")
         if head:
             st = soup.new_tag("style", id="harv-brand")
             st.string = css
             head.append(st)
+
+    # ── Dark-variant: token-overrides leven in de template (body.harv-dark) ──
+    if _dark_theme:
+        body_el = soup.find("body")
+        if body_el is not None:
+            body_el["class"] = (body_el.get("class") or []) + ["harv-dark"]
 
     # ── Esthetische + responsieve tweaks ──
     n_steps = len([s for s in (td.get("_STEPS") or []) if s.get("title")]) or 4
@@ -2502,6 +3141,7 @@ def _bake_dakdekker_dom(html: str, td: dict[str, Any]) -> str:
             "border-radius:12px;font-weight:700;font-size:15px;text-decoration:none;height:50px}"
             ".harv-mobilebar .harv-mb-phone{width:50px;flex:0 0 50px;background:var(--c-accent);color:#fff}"
             ".harv-mobilebar .harv-mb-quote{flex:1;background:var(--c-dark);color:#fff}"
+            "body.harv-dark .harv-mobilebar{background:rgba(13,20,36,.97);border-top:1px solid rgba(255,255,255,.08)}"
             "body.preview-mobile.harv-intro-done .harv-mobilebar{display:flex}"
             "body.preview-mobile .sticky-cta{display:none}"
             "@media(max-width:759px){body.harv-intro-done .harv-mobilebar{display:flex}.sticky-cta{display:none}}"
@@ -2510,7 +3150,16 @@ def _bake_dakdekker_dom(html: str, td: dict[str, Any]) -> str:
             + desktop +
             "body.preview-mobile .process-grid{grid-template-columns:1fr}"
             "body.preview-mobile .tm-grid{grid-template-columns:1fr}"
-            "body.preview-mobile .stats{grid-template-columns:repeat(" + str(min(n_stats, 3)) + ",1fr)}"
+            # RULES 7b: stats-balk op mobiel als compacte grid (display:grid is
+            # nodig — template A's .stats is flex, waar kolommen niets doen en
+            # de rij anders buiten beeld loopt op 390px), max 3 naast elkaar.
+            # RULES 7b: mobiel gecentreerd, met een consequent scheidingslijntje
+            # tussen ALLE cijfers (de template-eigen even/odd-regel sloeg er één
+            # over) — currentColor-mix zodat het in licht én donker leesbaar is.
+            # Stats-layout op mobiel komt UIT DE TEMPLATE (RULES 7b: vaste
+            # 3-koloms gecentreerde rij). De generator injecteert hier bewust
+            # NIETS meer overheen — eerdere injecties vochten met de template
+            # en stapelden de cijfers onder elkaar (feedback 2026-06-11).
             "@media(max-width:759px){.process-grid{grid-template-columns:1fr}.tm-grid{grid-template-columns:1fr}}"
         )
         head.append(tw)
@@ -2569,6 +3218,83 @@ def _bake_dakdekker_dom(html: str, td: dict[str, Any]) -> str:
         for e in soup.select(".logo-img"):
             e.decompose()
 
+    # ── RULES 5 (template B): het dakje-icoon is nooit een logo(vervanger) —
+    #    ook niet in de footer of de mobiele nav. Mét logo: overal het echte
+    #    logo; zonder: initialen-monogram in de merkkleur.
+    brand_marks = soup.select(".brand-mark")
+    if brand_marks:
+        _logo = str(td.get("LOGO_URL") or "").strip()
+        for bm in brand_marks:
+            bsvg = bm.find("svg")
+            bimg = bm.select_one(".brand-logo-img")
+            if _logo:
+                if bimg is None:
+                    bimg = soup.new_tag("img", attrs={"class": "brand-logo-img", "alt": ""})
+                    bimg["onerror"] = "this.removeAttribute('src')"
+                    bm.insert(0, bimg)
+                bimg["src"] = _logo
+                if bsvg:
+                    bsvg.decompose()
+            else:
+                # RULES 5 (besluit 2026-06-11): een merkteken verzinnen mag
+                # NIET — ook geen monogram/initialen. Geen logo gevonden ->
+                # alleen de bedrijfsnaam als tekst, het merk-vak verdwijnt.
+                bm.decompose()
+        head_b = soup.find("head")
+
+        # RULES 5: bevat het logo de bedrijfsnaam al, zet de naam er dan niet
+        # nóg eens naast — logo groter, tekst weg. Primair beslist de
+        # vision-check (ai_select_images keek letterlijk naar het logo);
+        # alleen zonder uitslag valt de brede-beeld-heuristiek in.
+        if _logo:
+            # Wordmark = vision-ja ÓF duidelijk breed beeld. OR-logica: het
+            # vision-antwoord wisselt per run; een breed logo (aspect >= 2.6)
+            # bevat vrijwel altijd de naam — dat signaal mag een AI-"false"
+            # niet verliezen.
+            _ai_word = (td.get("_AI_IMGS") or {}).get("logo_contains_name")
+            lmeta = None
+            if _logo.lower().split("?")[0].endswith(".svg"):
+                _asp = _svg_aspect(_logo)
+            else:
+                lmeta = _image_meta(_logo)
+                _asp = (lmeta["w"] / max(1.0, float(lmeta["h"]))) if lmeta else None
+            _ai_word = bool(_ai_word) or bool(_asp and _asp >= 2.6)
+
+            # RULES 5: logo altijd leesbaar op zijn achtergrond. Een "light"-
+            # logo (wit/zeer licht) valt weg op het lichte thema -> donker
+            # chipje erachter; een zeer donker logo op de dark-variant -> licht
+            # chipje. Gemeten op de echte pixels, geen aannames.
+            _lum = (lmeta or {}).get("lum")
+            _chip = None
+            if _lum is not None:
+                if not _dark_theme and _lum > 195:
+                    _chip = "var(--c-dark, #1a2334)"
+                elif _dark_theme and _lum < 60:
+                    _chip = "#ffffff"
+            if _chip and head_b:
+                cst = soup.new_tag("style", id="harv-logochip")
+                cst.string = (
+                    ".header .brand-mark:has(.brand-logo-img[src]:not([src=\"\"])){"
+                    f"background:{_chip};border-radius:9px;padding:4px 10px}}")
+                head_b.append(cst)
+            if _ai_word:
+                for bt in soup.select(".brand .brand-txt"):
+                    bt.decompose()
+                if head_b:
+                    # Wordmark mag de balk nooit uitgroeien. EXPLICIETE hoogte
+                    # op de img zelf: met height:100% + max-width won max-width
+                    # en schaalde de hoogte mee (84px in een 34px-vak -> alleen
+                    # het topje zichtbaar). object-fit:contain vangt brede
+                    # logo's die tegen de max-width aanlopen.
+                    wst = soup.new_tag("style", id="harv-wordmark")
+                    wst.string = (
+                        ".brand-mark{width:auto;min-width:34px;height:34px;max-width:184px;"
+                        "background:transparent;border-radius:0}"
+                        ".brand-logo-img{height:34px;width:auto;max-width:180px;"
+                        "border-radius:0;object-fit:contain}"
+                        ".footer .brand-mark{height:auto}")
+                    head_b.append(wst)
+
     # Hero-rating/reviews alleen bij echte Google-rating
     if not is_set("HERO_RATING"):
         for e in soup.select(".reviews, .ms-reviews"):
@@ -2604,11 +3330,52 @@ def _bake_dakdekker_dom(html: str, td: dict[str, Any]) -> str:
         else:
             m_guar.decompose()
 
-    # Stats (count-up): tonen bij echte cijfers; lege kaarten weg
+    # Stats (count-up): tonen bij echte cijfers; lege kaarten weg.
+    # RULES 7b: de template-defaults in data-to (20 / 4,9 / 3.000) zouden anders
+    # over de échte lead-waarde heen animeren ("3.000+ Bereikbaar bij spoed").
+    # Patch data-to naar de lead-waarde; niet-numeriek (24/7, Gratis, <24u)
+    # animeert niet maar staat er direct.
     if td.get("SHOW_STATS") is True:
         for i, st in enumerate(soup.select(".stats .stat"), 1):
             if not is_set(f"STAT_{i}_VALUE"):
                 st.decompose()
+                continue
+            cnt = st.select_one(".count")
+            if cnt is None:
+                continue  # template A: statische waarde, geen count-up
+            val = str(td.get(f"STAT_{i}_VALUE") or "").strip()
+            suf = st.select_one(".suf")
+            m_dec = re.fullmatch(r"\d+,\d", val)
+            m_int = re.fullmatch(r"(\d[\d.]*)\s*(\+?)", val)
+            if m_dec:
+                cnt["data-to"] = val
+                cnt["data-decimal"] = ""
+                if cnt.has_attr("data-tpl"):
+                    del cnt["data-tpl"]  # runtime-hydration niet óver de teller heen
+                if suf:
+                    suf.decompose()
+            elif m_int:
+                cnt["data-to"] = m_int.group(1)
+                if cnt.has_attr("data-decimal"):
+                    del cnt["data-decimal"]
+                if cnt.has_attr("data-tpl"):
+                    del cnt["data-tpl"]  # anders schrijft hydration "22+" naast .suf → "22++"
+                cnt.string = m_int.group(1)
+                if suf and not m_int.group(2):
+                    suf.decompose()
+                elif not suf and m_int.group(2):
+                    nsuf = soup.new_tag("span", attrs={"class": "suf"})
+                    nsuf.string = "+"
+                    cnt.insert_after(nsuf)
+            else:
+                # Geen telbaar getal: count-up uitschakelen, waarde laten staan.
+                cnt["class"] = [c for c in (cnt.get("class") or []) if c != "count"]
+                if cnt.has_attr("data-to"):
+                    del cnt["data-to"]
+                if cnt.has_attr("data-decimal"):
+                    del cnt["data-decimal"]
+                if suf:
+                    suf.decompose()
     else:
         for e in soup.select(".stats"):
             e.decompose()
@@ -2632,16 +3399,32 @@ def _bake_dakdekker_dom(html: str, td: dict[str, Any]) -> str:
         else:
             _svc_rows.append(row)
     _pool = td.get("_IMAGE_POOL") or []
-    _used: set = set()
+    _ai_imgs = td.get("_AI_IMGS") or {}
+    _ai_svc = _ai_imgs.get("services") or {}
+    _ai_hero = list(_ai_imgs.get("hero") or [])      # hero-foto's: niet hergebruiken
+    _ai_approved = list(_ai_imgs.get("approved") or [])  # ALLE door de keuring gekomen foto's
+    _used: set = set(_ai_svc.values()) | set(_ai_imgs.get("why") or []) | set(_ai_hero)
     _pi = 0
-    for row in _svc_rows:
+    # De eerste 3 dienst-foto's komen van de eigen site. Volgorde: AI-keuze ->
+    # alt-match -> nog ongebruikte GOEDGEKEURDE sitefoto -> pas daarna stock.
+    # Cruciaal (strenge keuring): blind-fill put UITSLUITEND uit `approved` — nooit
+    # uit de rauwe pool, want een niet-goedgekeurde restfoto is vermoedelijk
+    # schimmel/open dak/keurmerk/tekst en mag de site niet in.
+    _leftover = [u for u in _ai_approved if u not in _used]
+    _blind_fill_ok = bool(_ai_approved)  # alleen blind-fill als er goedgekeurde foto's zijn
+    for idx, row in enumerate(_svc_rows):
         h3 = row.select_one("h3")
         slot = row.select_one(".img-slot")
         if not slot:
             continue
         nm = h3.get_text(" ", strip=True) if h3 else ""
-        real = _match_image(nm, _pool, _used)  # echte sitefoto op dienstnaam (alt-match)
+        real = _ai_svc.get(nm) or _match_image(nm, _pool, _used)
+        if not real and idx < 3 and _blind_fill_ok:
+            _leftover = [u for u in _leftover if u not in _used]
+            if _leftover:
+                real = _leftover.pop(0)
         if real:
+            _used.add(real)
             slot["style"] = f"--bg-img: url('{real}')"
         elif "plat" in nm.lower():
             slot["style"] = f"--bg-img: url('{_FLAT_IMG}')"
@@ -2649,24 +3432,174 @@ def _bake_dakdekker_dom(html: str, td: dict[str, Any]) -> str:
             slot["style"] = f"--bg-img: url('{_STOCK_POOL[_pi % len(_STOCK_POOL)]}')"
             _pi += 1
 
+    # Template B: de dienst-kaarten zijn .svc-artikelen met een <img> in
+    # .svc-img — een ANDERE markup dan A's .service-row/.img-slot. Dit was de
+    # reden dat B-demo's nooit eigen sitefoto's in de diensten kregen.
+    _svc_cards_b = soup.select(".svc-grid .svc")
+    if _svc_cards_b:
+        _leftover = [u for u in _ai_approved if u not in _used]
+        for idx, card in enumerate(_svc_cards_b):
+            h3 = card.select_one("h3")
+            img = card.select_one(".svc-img img")
+            if img is None:
+                continue
+            nm = h3.get_text(" ", strip=True) if h3 else ""
+            real = _ai_svc.get(nm) or _match_image(nm, _pool, _used)
+            if not real and idx < 3 and _blind_fill_ok:
+                _leftover = [u for u in _leftover if u not in _used]
+                if _leftover:
+                    real = _leftover.pop(0)
+            if real:
+                _used.add(real)
+                img["src"] = real
+                if img.get("loading"):
+                    del img["loading"]
+
+    # ── Template C: diensten = lange tekst-lijst (.svc-list .svc, max 6) + ÉÉN
+    #    sticky dienst-foto (.svc-photo img). C gebruikt bewust 2 hero + 1 dienst
+    #    eigen foto's; de rest blijft bundled stock (top-backups). ──
+    _c_svc_rows = soup.select(".svc-list .svc")
+    if _c_svc_rows:
+        for idx, row in enumerate(_c_svc_rows, 1):
+            # Rij verwijderen als zijn dienst-naam leeg is (geen Verhoeven-restjes).
+            if not str(td.get(f"SERVICE_{idx}_NAME") or "").strip():
+                row.decompose()
+        # De sticky dienst-foto: beste goedgekeurde dienst-/site-foto, anders stock.
+        c_svc_photo = soup.select_one(".svc-photo img")
+        if c_svc_photo is not None:
+            _svc_pick = next(iter(_ai_svc.values()), None) \
+                or next((u for u in _ai_approved if u not in _used), None)
+            _C_SVC_BACKUP = "/demo-assets/dakdekkers/service-1-install.jpg"
+            c_svc_photo["src"] = _svc_pick or _C_SVC_BACKUP
+            c_svc_photo["onerror"] = f"this.onerror=null;this.src='{_C_SVC_BACKUP}'"
+            if _svc_pick:
+                _used.add(_svc_pick)
+
+    # ── Template C: feitenband + review-rating zijn echte-data-of-weg (heilige
+    #    no-fabricatie-regel). Geen rating → verwijder het rating-feit én de
+    #    review-score; leeg STAT_n → verwijder dat feit. ──
+    _c_facts = soup.select(".facts .fact")
+    if _c_facts:
+        _has_rating = bool(str(td.get("HERO_RATING") or "").strip())
+        for f in _c_facts:
+            kind = f.get("data-fact") or ""
+            if kind == "rating" and not _has_rating:
+                f.decompose()
+            elif kind.startswith("stat"):
+                n = kind.replace("stat", "")
+                if not str(td.get(f"STAT_{n}_VALUE") or "").strip():
+                    f.decompose()
+        if not _has_rating:
+            sc = soup.select_one(".rev-score")
+            if sc is not None:
+                sc.decompose()
+
     # ── Why-mozaïek: vul met echte (nog ongebruikte) sitefoto's; anders de stock ──
-    _wy_imgs = [it["url"] for it in _pool if it.get("url") and it["url"] not in _used]
+    # RULES 7: alleen dak-relevante foto's (geen portretten/kantoor/interieur).
+    # Keywords matchen op BESTANDSNAAM + alt — niet op de hele URL, want de
+    # domeinnaam van een dakdekker bevat zelf al "dak". Portret/vierkant
+    # (h >= w) is vrijwel nooit dakwerk -> overslaan.
+    _DAK_KW = ("dak", "roof", "bitumen", "epdm", "pannen", "lood", "zink",
+               "goot", "schoorsteen", "isolat", "renovat", "storm", "lekkage")
+
+    def _dak_relevant(it: dict) -> bool:
+        fname = (it.get("url") or "").rsplit("/", 1)[-1].lower()
+        hay = fname + " " + (it.get("alt") or "").lower()
+        if not any(k in hay for k in _DAK_KW):
+            return False
+        if it.get("w") and it.get("h") and int(it["h"]) >= int(it["w"]):
+            return False
+        return True
+
+    # ALLEEN AI-goedgekeurde foto's (de keurfilters van het visie-model kennen
+    # schimmel/keurmerken; de oude keyword-fallback liet die juist door).
+    # Geen AI-keuzes -> template-defaults blijven staan (professionele stock).
+    _wy_imgs = list(_ai_imgs.get("why") or [])
+    if not _ai_imgs:  # AI draaide helemaal niet -> voorzichtige keyword-fallback
+        _wy_imgs += [it["url"] for it in _pool
+                     if it.get("url") and it["url"] not in _used
+                     and it["url"] not in _wy_imgs and _dak_relevant(it)]
     for k, wslot in enumerate(soup.select('[data-img^="why_team_action"]')):
         if k < len(_wy_imgs):
             wslot["style"] = f"--bg-img: url('{_wy_imgs[k]}')"
             _used.add(_wy_imgs[k])
+    # Template B: het why-mozaïek bestaat uit <figure><img> — vul de srcs met
+    # de gekozen sitefoto's (defaults blijven staan waar niets gekozen is).
+    for k, wimg in enumerate(soup.select(".why-mosaic figure img")):
+        if k < len(_wy_imgs):
+            wimg["src"] = _wy_imgs[k]
+            if wimg.get("loading"):
+                del wimg["loading"]
+            _used.add(_wy_imgs[k])
 
-    # ── Hero-foto: ALTIJD dezelfde bundled foto (consistent, nooit per-lead), via
-    #    het gegarandeerde /demo-assets-pad. Lost meteen de ../assets 404 op. ──
+    # ── Hero-foto: de eigen, GOEDGEKEURDE site-foto als die door de strenge
+    #    keuring kwam (hero_safe + boven de hero-drempel); anders de vaste bundled
+    #    backup-foto via het gegarandeerde /demo-assets-pad. onerror valt altijd
+    #    terug op de backup. De hero draagt de demo -> liever niets dan een matige
+    #    foto, dus alleen `_ai_hero` (al gefilterd op hero_safe) belandt hier. ──
+    _HERO_BACKUP = "/demo-assets/dakdekkers/hero-houses.jpg"
+    # Template A/B: één hero-foto in .hero-img img.
     hero_img = soup.select_one(".hero-img img")
     if hero_img is not None:
-        hero_img["src"] = "/demo-assets/dakdekkers/hero-houses.jpg"
-        if hero_img.get("onerror"):
-            hero_img["onerror"] = "this.onerror=null;this.src='/demo-assets/dakdekkers/hero-houses.jpg'"
+        hero_img["src"] = (_ai_hero[0] if _ai_hero else _HERO_BACKUP)
+        hero_img["onerror"] = f"this.onerror=null;this.src='{_HERO_BACKUP}'"
+        if _ai_hero:
+            _used.add(_ai_hero[0])
+    # Template C: split-hero met twee foto's naast elkaar. Vul de 2 beste
+    # goedgekeurde hero-foto's; ontbreekt er één -> bundled backup per slot.
+    _c_hero_slots = soup.select(".hero-imgs figure img, .hero-imgs img, "
+                                ".hero-split .hero-photo, .hero-photos img, .hero-split img")
+    if _c_hero_slots:
+        _hero_backups = [_HERO_BACKUP, "/demo-assets/dakdekkers/why-1.jpg"]
+        for hi, slot in enumerate(_c_hero_slots[:2]):
+            src = _ai_hero[hi] if hi < len(_ai_hero) else _hero_backups[hi % len(_hero_backups)]
+            if slot.name == "img":
+                slot["src"] = src
+                slot["onerror"] = f"this.onerror=null;this.src='{_hero_backups[hi % len(_hero_backups)]}'"
+            else:
+                slot["style"] = f"--bg-img: url('{src}')"
+            if hi < len(_ai_hero):
+                _used.add(_ai_hero[hi])
 
     # ── Dubbele CTA's weghalen (er staat er al een sticky/nav in beeld) ──
     for a in soup.select("#why a.btn, .process-head a.btn"):
         a.decompose()
+
+    # ── Nav: de Projecten-link alleen tonen als er echte projecten zijn —
+    #    anders wijst hij naar een (runtime) verborgen sectie. ──
+    if td.get("SHOW_PROJECTS") is not True:
+        for a in soup.select('a[href="#projecten"], a[href="#projects"]'):
+            a.decompose()
+
+    # RULES 6: sweet spot is 4-5 nav-items; drie of minder oogt kaal. Vul aan
+    # met "Over ons" (label-categorie van hun bedrijfspagina, wijst naar de
+    # waarom-sectie) en daarna Werkwijze. Hoge data-nav-prio zodat vul-items
+    # bij ruimtegebrek als eerste weer wijken.
+    _nav = soup.select_one(".header .nav")
+    if _nav is not None:
+        _fillers = [("#waarom", "Over ons", "3"), ("#werkwijze", "Werkwijze", "4")]
+        for href, label, prio in _fillers:
+            links = _nav.select("a.navlink")
+            if len(links) >= 4:
+                break
+            if soup.select_one(href) is None:
+                continue  # sectie bestaat niet (meer) in deze demo
+            if _nav.select_one(f'a[href="{href}"]'):
+                continue
+            a = soup.new_tag("a", attrs={"class": "navlink", "href": href,
+                                         "data-nav-prio": prio})
+            a.string = label
+            links[-1].insert_after(a)
+        # Mobiele menu meeneemt: zelfde aanvulling vóór de Contact-link.
+        _mm = soup.select_one(".mm-links")
+        if _mm is not None and len(_nav.select("a.navlink")) >= 4:
+            for href, label, _prio in _fillers:
+                if _nav.select_one(f'a[href="{href}"]') and not _mm.select_one(f'a[href="{href}"]'):
+                    a = soup.new_tag("a", attrs={"href": href})
+                    a.string = label
+                    contact = _mm.select_one('a[href="#offerte"]')
+                    if contact:
+                        contact.insert_before(a)
 
     # ── Diensten: eigenaar-gerichte hint als we geen echte diensten vonden ──
     if td.get("_SERVICES_GENERIC"):
@@ -3014,7 +3947,35 @@ def _render_dakdekker_html(
     colors: tuple[Optional[str], Optional[str]] = (None, None)
     if url:
         bundle = fetch_site_bundle(url)
-        colors = detect_brand_colors(bundle.get("html", ""), bundle.get("css", ""))
+        # RULES 5: NOOIT een logo verzinnen. Staat er geen logo in de leaddata,
+        # haal hem dan van de site; monogram is pas het állerlaatste vangnet.
+        if not str(data.get("logo_url") or "").strip() and bundle.get("html"):
+            _lsoup = BeautifulSoup(bundle["html"], "html.parser")
+            _found_logo = _safe(extract_logo, _lsoup, url)
+            if _found_logo:
+                data["logo_url"] = _found_logo
+                print(f"  🔎 logo van de site gehaald: {_found_logo[:80]}")
+        # Merkkleur van de GERENDERDE site (wat de bezoeker ziet); statische
+        # CSS-frequentie alleen als fallback — die trapt in vendor-paletten.
+        _acc, _drk, _site_bg, _cta_col = detect_brand_colors_rendered(url)
+        colors = (_acc, _drk)
+        if not colors[0]:
+            colors = detect_brand_colors(bundle.get("html", ""), bundle.get("css", ""))
+        # Breed werkgebied ook herkennen aan meerdere stadsnamen in de sitetekst
+        # ("dakdekker Den Haag … dakdekker Rijswijk" -> regio benoemen).
+        _stedenkoppen = set(re.findall(r"[Dd]akdekkers?\s+(?:in\s+)?([A-Z][a-zA-Zé-]{3,})",
+                                       bundle.get("text") or ""))
+        if len(_stedenkoppen) >= 2:
+            extract_area_hint = " regio " + ", ".join(sorted(_stedenkoppen)[:4])
+        else:
+            extract_area_hint = ""
+        # Donkere variant: expliciet via --theme, of automatisch wanneer de
+        # eigen site van de lead donker is (RULES 3b).
+        _theme = str(data.get("_theme") or "auto").lower()
+        dark_theme = _theme == "dark" or (
+            _theme == "auto" and bool(_site_bg) and _brightness(_site_bg) < 80)
+        if dark_theme:
+            print(f"  🌙 donkere variant (site-achtergrond {_site_bg or 'geforceerd'})")
         city = _city_from_address(data.get("adres"), data.get("stad") or "")
         extract = ai_site_extract(
             bundle.get("text", ""),
@@ -3024,14 +3985,31 @@ def _render_dakdekker_html(
         extract["project_cards"] = bundle.get("project_cards", [])
         extract["service_cards"] = bundle.get("service_cards", [])
         extract["image_pool"] = bundle.get("image_pool", [])
+        if extract_area_hint:
+            extract["service_area"] = (str(extract.get("service_area") or "")
+                                       + extract_area_hint)
         if colors[0]:
-            print(f"  🎨 merkkleur: accent={colors[0]} dark={colors[1]}")
+            print(f"  🎨 merkkleur: accent={colors[0]} dark={colors[1]}"
+                  + (f" cta={_cta_col}" if _cta_col else ""))
         print(f"  🧩 site-extract: {len(extract.get('process') or [])} stappen, "
               f"{len(extract.get('services') or [])} diensten ({len(extract.get('service_cards') or [])} met foto), "
               f"{len(extract.get('project_cards') or [])} projecten, "
               f"cert={extract.get('certified')} garantie={extract.get('guarantee')}")
 
     td = build_dakdekker_template_data(data, ai_content, extract, colors)
+    td["_DARK_THEME"] = bool(url) and dark_theme
+    td["_CTA_COLOR"] = _cta_col if url else None
+
+    # AI-beeldselectie: site-foto's slim toewijzen aan dienst-/why-slots, plus
+    # de wordmark-vraag (staat de naam al in het logo?). Best effort.
+    _svc_names = [str(td.get(f"SERVICE_{i}_NAME") or "").strip()
+                  for i in range(1, 7) if str(td.get(f"SERVICE_{i}_NAME") or "").strip()]
+    td["_AI_IMGS"] = ai_select_images(
+        td.get("_IMAGE_POOL") or [], _svc_names,
+        str(td.get("COMPANY_NAME") or ""),
+        logo_url=str(td.get("LOGO_URL") or ""),
+        slug=slug, lead_id=lead_id,
+    )
 
     # Embed-JSON zonder interne (_-prefixed) sleutels.
     embed_td = {k: v for k, v in td.items() if not k.startswith("_")}
@@ -3075,6 +4053,21 @@ def _render_dakdekker_html(
     # Bak echte waarden + sectie-zichtbaarheid server-side in de raw HTML
     # (geen nep-defaults in de bron; werkt ook zonder JavaScript).
     html = _bake_dakdekker_dom(html, td)
+
+    # Leklijst-termen die AANTOONBAAR op de eigen site staan (bv. een echt
+    # VEBIDAK-lidmaatschap) zijn geen placeholder-lek. Markeer ze zodat de
+    # gate ze overslaat — alleen termen die letterlijk in de sitetekst staan.
+    try:
+        import rules_loader as _rl
+        _leak_terms = _rl.get_placeholder_leaks() or ()
+    except Exception:  # noqa: BLE001
+        _leak_terms = ("Van den Berg", "VEBIDAK", "210+", "sinds 2003", "Lorem ipsum")
+    _site_text = (bundle.get("text") or "").lower() if url else ""
+    _verified = [t for t in _leak_terms
+                 if t.lower() in _site_text and t.lower() in html.lower()]
+    if _verified:
+        html += f"\n<!-- harv-verified-terms: {'|'.join(_verified)} -->"
+        print(f"  ✅ geverifieerde site-termen (geen lek): {', '.join(_verified)}")
     return html
 
 
@@ -3667,7 +4660,8 @@ def _main_dakdekker(args: argparse.Namespace, slug: str) -> int:
 
     notion_id = args.notion_page_id or lead.get("notion_page_id") or ""
     data = lead_to_demo_data(lead)
-    tpl_variant = getattr(args, "template", "a") or "a"
+    data["_theme"] = getattr(args, "theme", "auto") or "auto"
+    tpl_variant = getattr(args, "template", "c") or "c"
     tpl_path = TEMPLATES_ROOT / "Roofer" / f"dakdekkers-{tpl_variant}.html"
     print(f"🏗  render dakdekker-demo  slug={slug}  template={tpl_variant}  bedrijf={lead.get('bedrijfsnaam','')[:40]}")
     try:
@@ -3721,7 +4715,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument(
         "--sector",
         required=True,
-        help="Sector (gebruik 'makelaardij') — voedt de nav fallback.",
+        help="Sector (gebruik 'dakdekkers') — bepaalt template + nav fallback.",
     )
     parser.add_argument(
         "--no-push",
@@ -3749,9 +4743,17 @@ def main(argv: Optional[list[str]] = None) -> int:
     )
     parser.add_argument(
         "--template",
-        choices=["a", "b"],
-        default="a",
-        help="Template-variant voor dakdekkers: 'a' (origineel) of 'b' (helder). Default a.",
+        choices=["a", "b", "c"],
+        default="c",
+        help="Template-variant voor dakdekkers: 'c' (premium, DEFAULT — vervangt a) "
+             "of 'b' (helder). 'a' (origineel) is uitgefaseerd maar blijft selecteerbaar.",
+    )
+    parser.add_argument(
+        "--theme",
+        choices=["auto", "light", "dark"],
+        default="auto",
+        help="Kleurthema: 'auto' volgt de site van de lead (donkere site → "
+             "donkere variant), 'light'/'dark' forceren.",
     )
     args = parser.parse_args(argv)
 

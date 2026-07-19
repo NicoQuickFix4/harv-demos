@@ -131,7 +131,7 @@ Alles is terug te leiden tot de lead:
 ## 5. Kosten
 
 * AI-content: ongeveer **€0,0012 per lead** gemeten (Claude Haiku, ~700+170 tokens).
-* Ruim binnen de harde grens van €0,20 per lead all-in.
+* Ruim binnen de harde grens van €0,08 per lead all-in.
 * De kosten worden per lead gelogd (zie de `🤖`-regel in de output en `_cost_eur`
   in het resultaat).
 

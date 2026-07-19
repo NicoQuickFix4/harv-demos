@@ -24,7 +24,7 @@ Dit module bundelt drie dingen die elke sector-template kan overnemen:
      ("we nemen binnen 24u contact op") → kleine CTA → Cal.com embed.
      De ingevulde data wordt naar de Flask-backend (`/demo-lead`) gepost.
 
-Kostenregel (Harv): AI-content moet ruim binnen €0,20/lead all-in blijven.
+Kostenregel (Harv): AI-content moet ruim binnen €0,08/lead all-in blijven.
 Haiku-call hier ≈ €0,004/lead. `ai_demo_content()` logt de kosten per lead en
 zet ze in het resultaat onder `_cost_eur`.
 
@@ -357,6 +357,8 @@ def ai_demo_content(
 
             merged["_cost_eur"] = round(cost, 5)
             merged["_source"] = "haiku"
+            merged["_model"] = HAIKU_MODEL
+            merged["_tokens"] = {"in": int(inp), "out": int(out)}
             return merged
 
         except Exception as exc:  # transient API-fout, JSON-fout, etc.
